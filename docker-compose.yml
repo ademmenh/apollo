@@ -1,0 +1,99 @@
+services:
+    postgres:
+        image: postgres:16-alpine
+        container_name: waslini-postgres
+        environment:
+            - POSTGRES_HOST=${DB_HOST}
+            - POSTGRES_USER=${DB_USER}
+            - POSTGRES_PASSWORD=${DB_PASSWORD}
+            - POSTGRES_DB=${DB_NAME}
+        expose:
+            - '5432'
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        networks:
+            - net
+        restart: unless-stopped
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U ${DB_USER} -d ${DB_NAME} -p 5432']
+            interval: 3s
+            timeout: 3s
+            retries: 2
+            start_period: 5s
+
+    valkey:
+        image: valkey/valkey-bundle:latest
+        container_name: waslini-valkey
+        networks:
+            - net
+        environment:
+            - VALKEY_USERNAME=${CACHE_USERNAME}
+            - VALKEY_PASSWORD=${CACHE_PASSWORD}
+            - VALKEY_TLS=${CACHE_TLS}
+        restart: unless-stopped
+        healthcheck:
+            test: ['CMD', 'valkey-cli', 'ping']
+            interval: 5s
+            timeout: 5s
+            retries: 3
+
+    nest:
+        build:
+            context: .
+        container_name: waslini-nest
+        env_file:
+            - .env
+        depends_on:
+            postgres:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+            valkey:
+                condition: service_healthy
+            ws:
+                condition: service_healthy
+        volumes:
+            - nest_logs:/app/logs
+        networks:
+            - net
+        ports:
+            - '${PORT}:${PORT}'
+        healthcheck:
+            test: [
+                "CMD-SHELL",
+                "bun -e \"import('http').then(h => h.get('http://localhost:${PORT}/api/v${API_VERSION}/health', r => process.exit(r.statusCode === 200 ? 0 : 1)))\""
+            ]
+            interval: 5s
+            timeout: 5s
+            retries: 2
+            start_period: 5s
+        restart: unless-stopped
+
+    nginx:
+        build:
+            context: ./nginx
+        container_name: waslini-nginx
+        ports:
+            - "${NGINX_PORT}:${NGINX_PORT}"
+        environment:
+            - NGINX_PORT=${NGINX_PORT}
+            - API_HOST=nest
+            - API_PORT=${PORT}
+            - S3_HOST=${S3_HOST}
+            - S3_PORT=${S3_PORT}
+            - S3_BUCKET=${S3_BUCKET}
+            - WS_HOST=ws
+            - WS_PORT=${WS_PORT:-3000}
+        depends_on:
+            nest:
+                condition: service_healthy
+        networks:
+            - net
+        restart: unless-stopped
+volumes:
+    postgres_data:
+    nest_logs:
+
+networks:
+    net:
+        driver: bridge
