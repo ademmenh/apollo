@@ -46,11 +46,7 @@ services:
         depends_on:
             postgres:
                 condition: service_healthy
-            rabbitmq:
-                condition: service_healthy
             valkey:
-                condition: service_healthy
-            ws:
                 condition: service_healthy
         volumes:
             - nest_logs:/app/logs
@@ -79,11 +75,6 @@ services:
             - NGINX_PORT=${NGINX_PORT}
             - API_HOST=nest
             - API_PORT=${PORT}
-            - S3_HOST=${S3_HOST}
-            - S3_PORT=${S3_PORT}
-            - S3_BUCKET=${S3_BUCKET}
-            - WS_HOST=ws
-            - WS_PORT=${WS_PORT:-3000}
         depends_on:
             nest:
                 condition: service_healthy
