@@ -12,7 +12,7 @@ import { JwtRefreshGuard } from './guards/jwt-refresh.guard'
 import { JwtAccessGuard } from './guards/jwt-access.guard'
 import { AuthExceptionFilter } from './auth-exception.filter'
 import {
-    UserResponse,
+    User,
     LoginResponse,
     RefreshResponse,
     SuccessResponse,
@@ -45,10 +45,10 @@ export class AuthResolver {
         return 'Auth service is running'
     }
 
-    @Mutation(() => UserResponse)
+    @Mutation(() => User)
     async register(
         @Args('input', { type: () => RegisterUserInput }) input: RegisterUserInput,
-    ): Promise<UserResponse> {
+    ): Promise<User> {
         const user = await this.registerUserUseCase.execute({
             id: randomUUID(),
             ...input,

@@ -2,13 +2,13 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
-type UserResponse {
+type User {
   id: ID!
   email: String
   fullName: String!
   birthDate: DateTime!
   phoneNumber: String
-  role: String!
+  role: UserRole!
   createdAt: DateTime!
 }
 
@@ -17,8 +17,13 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
 type LoginResponse {
-  user: UserResponse!
+  user: User!
   accessToken: String!
   refreshToken: String!
 }
@@ -37,7 +42,7 @@ type Query {
 }
 
 type Mutation {
-  register(input: RegisterUserInput!): UserResponse!
+  register(input: RegisterUserInput!): User!
   verify(input: VerifyUserInput!): LoginResponse!
   login(input: LoginInput!): LoginResponse!
   refresh: RefreshResponse!
@@ -47,31 +52,31 @@ type Mutation {
 }
 
 input RegisterUserInput {
-  email: String! = ""
-  fullName: String! = ""
-  birthDate: String! = ""
-  password: String! = ""
-  phoneNumber: String
+  email: String!
+  fullName: String!
+  birthDate: String!
+  password: String!
+  phoneNumber: String!
 }
 
 input VerifyUserInput {
-  id: ID! = ""
-  code: String! = ""
+  id: ID!
+  code: String!
 }
 
 input LoginInput {
-  email: String! = ""
-  password: String! = ""
+  email: String!
+  password: String!
 }
 
 input ForgotPasswordResetInput {
-  id: ID! = ""
-  secret: String! = ""
-  newPassword: String! = ""
+  id: ID!
+  secret: String!
+  newPassword: String!
 }
 
 input ResetPasswordInput {
-  id: ID! = ""
-  oldPassword: String! = ""
-  newPassword: String! = ""
+  id: ID!
+  oldPassword: String!
+  newPassword: String!
 }

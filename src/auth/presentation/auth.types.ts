@@ -1,7 +1,16 @@
-import { Field, ID, InputType, ObjectType } from '@nestjs/graphql'
+import { Field, ID, InputType, ObjectType, registerEnumType, GraphQLISODateTime } from '@nestjs/graphql'
+
+export enum UserRole {
+    USER = 'Client',
+    ADMIN = 'Admin',
+}
+
+registerEnumType(UserRole, {
+    name: 'UserRole',
+})
 
 @ObjectType()
-export class UserResponse {
+export class User {
     @Field(() => ID)
     id: string
 
@@ -11,23 +20,23 @@ export class UserResponse {
     @Field(() => String)
     fullName: string
 
-    @Field(() => Date)
+    @Field(() => GraphQLISODateTime)
     birthDate: Date
 
     @Field(() => String, { nullable: true })
     phoneNumber: string | null
 
-    @Field(() => String)
-    role: string
+    @Field(() => UserRole)
+    role: UserRole
 
-    @Field(() => Date)
+    @Field(() => GraphQLISODateTime)
     createdAt: Date
 }
 
 @ObjectType()
 export class LoginResponse {
-    @Field(() => UserResponse)
-    user: UserResponse
+    @Field(() => User)
+    user: User
 
     @Field(() => String)
     accessToken: string
@@ -54,59 +63,59 @@ export class SuccessResponse {
 @InputType()
 export class RegisterUserInput {
     @Field(() => String)
-    email: string = ''
+    email: string
 
     @Field(() => String)
-    fullName: string = ''
+    fullName: string
 
     @Field(() => String)
-    birthDate: string = ''
+    birthDate: string
 
     @Field(() => String)
-    password: string = ''
+    password: string
 
-    @Field(() => String, { nullable: true })
+    @Field(() => String)
     phoneNumber?: string
 }
 
 @InputType()
 export class LoginInput {
     @Field(() => String)
-    email: string = ''
+    email: string
 
     @Field(() => String)
-    password: string = ''
+    password: string
 }
 
 @InputType()
 export class VerifyUserInput {
     @Field(() => ID)
-    id: string = ''
+    id: string
 
     @Field(() => String)
-    code: string = ''
+    code: string
 }
 
 @InputType()
 export class ForgotPasswordResetInput {
     @Field(() => ID)
-    id: string = ''
+    id: string
 
     @Field(() => String)
-    secret: string = ''
+    secret: string
 
     @Field(() => String)
-    newPassword: string = ''
+    newPassword: string
 }
 
 @InputType()
 export class ResetPasswordInput {
     @Field(() => ID)
-    id: string = ''
+    id: string
 
     @Field(() => String)
-    oldPassword: string = ''
+    oldPassword: string
 
     @Field(() => String)
-    newPassword: string = ''
+    newPassword: string
 }

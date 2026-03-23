@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common'
+import { join } from 'path'
 import { GraphQLModule } from '@nestjs/graphql'
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo'
 import { ConfigModule } from './config/config.module'
@@ -19,7 +20,7 @@ import { ScheduleModule } from '@nestjs/schedule'
         ScheduleModule.forRoot(),
         GraphQLModule.forRoot<ApolloDriverConfig>({
             driver: ApolloDriver,
-            autoSchemaFile: true,
+            autoSchemaFile: join(process.cwd(), 'schema.gql'),
             playground: process.env.NODE_ENV !== 'production',
         }),
     ],
