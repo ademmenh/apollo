@@ -5,7 +5,7 @@ import { Batch, GlideClient, GlideJson, GlideString } from '@valkey/valkey-glide
 import { IUserRepository } from '../../domain/user-repository.interface'
 import { User } from '../../domain/user.aggregate'
 import { UserMapper } from './user.mapper'
-import { usersTable, outboxEventsTable } from './schema'
+import { usersTable, outboxEventsTable, profilesTable } from './schema'
 import { randomUUID } from 'crypto'
 
 @Injectable()
@@ -19,20 +19,16 @@ export class UserRepository implements IUserRepository {
         this.ttl = 60 * 15
     }
 
-    async save(user: User, eventPayload: { type: string; payload: any }): Promise<User> {
+    async save(user: User): Promise<User> {
         const persistenceModel = UserMapper.toPersistence(user)
         await this.db.transaction(async (tx) => {
-            await tx.insert(usersTable).values(persistenceModel).onConflictDoUpdate({
+            await tx.insert(usersTable).values(persistenceModel.usersTable).onConflictDoUpdate({
                 target: usersTable.id,
-                set: persistenceModel,
+                set: persistenceModel.usersTable,
             })
-            await tx.insert(outboxEventsTable).values({
-                id: randomUUID(),
-                aggregateType: 'User',
-                aggregateId: user.getId().getValue(),
-                type: eventPayload.type,
-                payload: JSON.stringify(eventPayload.payload),
-                status: 'PENDING',
+            await tx.insert(profilesTable).values(persistenceModel.profilesTable).onConflictDoUpdate({
+                target: profilesTable.id,
+                set: persistenceModel.profilesTable,
             })
         })
         return user
@@ -40,26 +36,41 @@ export class UserRepository implements IUserRepository {
 
     async update(user: User): Promise<User> {
         const persistenceModel = UserMapper.toPersistence(user)
-        await this.db.update(usersTable).set(persistenceModel).where(eq(usersTable.id, user.getId().getValue()))
+        await this.db.transaction(async (tx) => {
+            await tx.update(usersTable).set(persistenceModel.usersTable).where(eq(usersTable.id, user.getId().getValue()))
+            await tx.update(profilesTable).set(persistenceModel.profilesTable).where(eq(profilesTable.id, user.getId().getValue()))
+        })
         return user
     }
 
     async findById(id: string): Promise<User | null> {
-        const result = await this.db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1)
+        const result = await this.db.select()
+            .from(usersTable)
+            .innerJoin(profilesTable, eq(usersTable.id, profilesTable.id))
+            .where(eq(usersTable.id, id))
+            .limit(1)
         if (result.length === 0) return null
-        return UserMapper.toDomain(result[0])
+        return UserMapper.toDomain(result[0].users, result[0].profiles)
     }
 
     async findByEmail(email: string): Promise<User | null> {
-        const result = await this.db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1)
+        const result = await this.db.select()
+            .from(usersTable)
+            .innerJoin(profilesTable, eq(usersTable.id, profilesTable.id))
+            .where(eq(usersTable.email, email))
+            .limit(1)
         if (result.length === 0) return null
-        return UserMapper.toDomain(result[0])
+        return UserMapper.toDomain(result[0].users, result[0].profiles)
     }
 
     async findByPhone(phone: string): Promise<User | null> {
-        const result = await this.db.select().from(usersTable).where(eq(usersTable.phoneNumber, phone)).limit(1)
+        const result = await this.db.select()
+            .from(usersTable)
+            .innerJoin(profilesTable, eq(usersTable.id, profilesTable.id))
+            .where(eq(profilesTable.phoneNumber, phone))
+            .limit(1)
         if (result.length === 0) return null
-        return UserMapper.toDomain(result[0])
+        return UserMapper.toDomain(result[0].users, result[0].profiles)
     }
 
     async saveNotVerified(user: User, codeHash: string, attempts: number, eventPayload: { type: string; payload: any }): Promise<void> {
@@ -97,12 +108,12 @@ export class UserRepository implements IUserRepository {
         if (!data) return null
         if (typeof data !== 'string') return null
         const parsed = JSON.parse(data)
-        const userPersistence = parsed.user
-        if (userPersistence.createdAt) userPersistence.createdAt = new Date(userPersistence.createdAt)
-        if (userPersistence.birthDate) userPersistence.birthDate = new Date(userPersistence.birthDate)
-        if (userPersistence.deletedAt) userPersistence.deletedAt = new Date(userPersistence.deletedAt)
+        const userPersistence = parsed.user as { usersTable: any; profilesTable: any }
+        if (userPersistence.usersTable.createdAt) userPersistence.usersTable.createdAt = new Date(userPersistence.usersTable.createdAt)
+        if (userPersistence.usersTable.deletedAt) userPersistence.usersTable.deletedAt = new Date(userPersistence.usersTable.deletedAt)
+        if (userPersistence.profilesTable.birthDate) userPersistence.profilesTable.birthDate = new Date(userPersistence.profilesTable.birthDate)
         return {
-            user: UserMapper.toDomain(userPersistence as any),
+            user: UserMapper.toDomain(userPersistence.usersTable, userPersistence.profilesTable),
             codeHash: parsed.codeHash,
             attempts: parsed.attempts,
         }
@@ -113,14 +124,14 @@ export class UserRepository implements IUserRepository {
         if (!userId) return null
         const key = `user:not-verified:${userId}`
         const data = await GlideJson.get(this.valkey, key)
-        const userd = this.parseGlideJson<{ user: any; codeHash: string; attempts: number }>(data)
+        const userd = this.parseGlideJson<{ user: { usersTable: any; profilesTable: any }; codeHash: string; attempts: number }>(data)
         if (!userd) return null
         const userPersistence = userd.user
-        if (userPersistence.createdAt) userPersistence.createdAt = new Date(userPersistence.createdAt)
-        if (userPersistence.birthDate) userPersistence.birthDate = new Date(userPersistence.birthDate)
-        if (userPersistence.deletedAt) userPersistence.deletedAt = new Date(userPersistence.deletedAt)
+        if (userPersistence.usersTable.createdAt) userPersistence.usersTable.createdAt = new Date(userPersistence.usersTable.createdAt)
+        if (userPersistence.usersTable.deletedAt) userPersistence.usersTable.deletedAt = new Date(userPersistence.usersTable.deletedAt)
+        if (userPersistence.profilesTable.birthDate) userPersistence.profilesTable.birthDate = new Date(userPersistence.profilesTable.birthDate)
         return {
-            user: UserMapper.toDomain(userPersistence),
+            user: UserMapper.toDomain(userPersistence.usersTable, userPersistence.profilesTable),
             codeHash: userd.codeHash,
             attempts: userd.attempts,
         }

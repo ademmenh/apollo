@@ -1,13 +1,12 @@
 import type { IUserRepository } from 'src/users/domain/user-repository.interface'
 import { User } from 'src/users/domain/user.aggregate'
-import { Session } from 'src/auth/domain/session.entity'
 
 export class InMemoryUserRepository implements IUserRepository {
     private users: Map<string, User> = new Map()
     private notVerifiedUsers: Map<string, { user: User; codeHash: string; attempts: number }> = new Map()
     private forgotPasswordSecrets: Map<string, { codeHash: string; code: string; attempts: number }> = new Map()
 
-    async save(user: User, eventPayload?: { type: string, payload: Session }): Promise<User> {
+    async save(user: User): Promise<User> {
         this.users.set(user.getId().getValue(), user)
         return user
     }

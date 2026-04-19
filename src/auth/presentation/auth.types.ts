@@ -10,12 +10,9 @@ registerEnumType(UserRole, {
 })
 
 @ObjectType()
-export class User {
+export class ProfileRDTO {
     @Field(() => ID)
     id: string
-
-    @Field(() => String, { nullable: true })
-    email: string | null
 
     @Field(() => String)
     fullName: string
@@ -25,18 +22,30 @@ export class User {
 
     @Field(() => String, { nullable: true })
     phoneNumber: string | null
+}
+
+@ObjectType()
+export class UserRDTO {
+    @Field(() => ID)
+    id: string
+
+    @Field(() => String, { nullable: true })
+    email: string | null
 
     @Field(() => UserRole)
     role: UserRole
+
+    @Field(() => ProfileRDTO)
+    profile: ProfileRDTO
 
     @Field(() => GraphQLISODateTime)
     createdAt: Date
 }
 
 @ObjectType()
-export class LoginResponse {
-    @Field(() => User)
-    user: User
+export class LoginRDTO {
+    @Field(() => UserRDTO)
+    user: UserRDTO
 
     @Field(() => String)
     accessToken: string
@@ -46,7 +55,7 @@ export class LoginResponse {
 }
 
 @ObjectType()
-export class RefreshResponse {
+export class RefreshRDTO {
     @Field(() => String)
     accessToken: string
 
@@ -61,7 +70,7 @@ export class SuccessResponse {
 }
 
 @InputType()
-export class RegisterUserInput {
+export class RegisterUserDTO {
     @Field(() => String)
     email: string
 
@@ -79,7 +88,7 @@ export class RegisterUserInput {
 }
 
 @InputType()
-export class LoginInput {
+export class LoginDTO {
     @Field(() => String)
     email: string
 
@@ -88,7 +97,7 @@ export class LoginInput {
 }
 
 @InputType()
-export class VerifyUserInput {
+export class VerifyUserDTO {
     @Field(() => ID)
     id: string
 
@@ -97,7 +106,7 @@ export class VerifyUserInput {
 }
 
 @InputType()
-export class ForgotPasswordResetInput {
+export class ForgotPasswordResetDTO {
     @Field(() => ID)
     id: string
 
@@ -109,7 +118,7 @@ export class ForgotPasswordResetInput {
 }
 
 @InputType()
-export class ResetPasswordInput {
+export class ResetPasswordDTO {
     @Field(() => ID)
     id: string
 

@@ -1,7 +1,7 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common'
 import { GqlContextType } from '@nestjs/graphql'
 import { Response } from 'express'
-import { AuthError, InvalidRefreshTokenError, InvalidTokenError, SessionExpiredError, UserNotFoundError } from '../domain/auth.error'
+import { AuthError, InvalidRefreshTokenError, InvalidTokenError, UserNotFoundError } from '../domain/auth.error'
 import { InvalidEmailError, InvalidPhoneNumberError, InvalidUserIdError, MissingEmailError, MissingPhoneNumberError, CanNotLoginError, PhoneAlreadyExistsError, UserAlreadyExistsError, WeakPasswordError } from '../../users/domain/user.errors'
 
 @Catch()
@@ -11,7 +11,7 @@ export class AuthExceptionFilter implements ExceptionFilter {
         let message = 'Internal server error'
 
         if (exception instanceof AuthError) {
-            if (exception instanceof InvalidTokenError || exception instanceof InvalidRefreshTokenError || exception instanceof SessionExpiredError) {
+            if (exception instanceof InvalidTokenError || exception instanceof InvalidRefreshTokenError) {
                 status = HttpStatus.UNAUTHORIZED
             } else if (exception instanceof UserNotFoundError) {
                 status = HttpStatus.NOT_FOUND

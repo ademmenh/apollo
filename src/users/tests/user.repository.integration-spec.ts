@@ -53,7 +53,7 @@ describe('UserRepository (Integration)', () => {
             'John Doe',
             new Date('1990-01-01'),
         )
-        await repository.save(user, { type: 'USER_VERIFIED', payload: { userId: user.getId().getValue(), hashedRefreshToken: 'dummy', userAgent: 'dummy', ipAddress: '127.0.0.1', role: user.getRole() } })
+        await repository.save(user)
         const foundUser = await repository.findById(userId.getValue())
         if (!foundUser) throw new Error('Found user should not be null')
         expect(foundUser.getId().getValue()).toBe(userId.getValue())
@@ -69,7 +69,7 @@ describe('UserRepository (Integration)', () => {
         const userId = UserId.create(randomUUID())
         const email = 'unique@example.com'
         const user = User.create(userId, Email.create(email), await Password.create('Password123!', mockHasher), 'Driver', PhoneNumber.create('0660123456'), 'Jane Smith', new Date('1992-05-01'))
-        await repository.save(user, { type: 'USER_VERIFIED', payload: { userId: user.getId().getValue(), hashedRefreshToken: 'dummy', userAgent: 'dummy', ipAddress: '127.0.0.1', role: user.getRole() } })
+        await repository.save(user)
         const foundUser = await repository.findByEmail(email)
         if (!foundUser) throw new Error('Found user should not be null')
         expect(foundUser.getId().getValue()).toBe(userId.getValue())
@@ -99,7 +99,7 @@ describe('UserRepository (Integration)', () => {
             'Original Name',
             new Date('1980-01-01'),
         )
-        await repository.save(user, { type: 'USER_VERIFIED', payload: { userId: user.getId().getValue(), hashedRefreshToken: 'dummy', userAgent: 'dummy', ipAddress: '127.0.0.1', role: user.getRole() } })
+        await repository.save(user)
         user.ban()
         await repository.update(user)
         const foundUser = await repository.findById(userId.getValue())

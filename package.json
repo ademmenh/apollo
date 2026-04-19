@@ -37,6 +37,7 @@
     },
     "dependencies": {
         "@apollo/server": "^5.5.0",
+        "@as-integrations/express5": "^1.1.2",
         "@nestjs-modules/mailer": "^2.0.2",
         "@nestjs/apollo": "^13.2.4",
         "@nestjs/common": "^11.1.9",
@@ -57,6 +58,7 @@
         "class-transformer": "^0.5.1",
         "class-validator": "^0.14.2",
         "cookie-parser": "^1.4.7",
+        "dataloader": "^2.2.3",
         "dotenv": "^17.2.3",
         "drizzle-orm": "^0.39.0",
         "graphql": "^16.13.2",

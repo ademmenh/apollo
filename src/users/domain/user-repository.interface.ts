@@ -1,8 +1,7 @@
 import { User } from './user.aggregate'
-import { Session } from 'src/auth/domain/session.entity'
 
 export interface IUserRepository {
-    save(user: User, eventPayload: { type: string, payload: Session }): Promise<User>
+    save(user: User): Promise<User>
     update(user: User): Promise<User>
     findById(id: string): Promise<User | null>
     findByEmail(email: string): Promise<User | null>

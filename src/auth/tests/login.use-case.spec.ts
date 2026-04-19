@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, jest } from 'bun:test'
 import { LoginUseCase } from '../application/login.use-case'
 import { InMemoryUserRepository } from '../../users/infrastructure/persistence/in-memory-user.repository'
 import { BcryptPasswordHasher } from '../../users/infrastructure/security/bcrypt-password-hasher'
-import { InMemorySessionRepository } from '../infrastructure/persistence/in-memory-session.repository'
 import { TokenAdapter } from '../infrastructure/adapters/token.adapter'
 import { JwtService } from '@nestjs/jwt'
 import { ConfigService } from '@nestjs/config'
@@ -17,14 +16,12 @@ describe('LoginUseCase', () => {
     let userRepository: InMemoryUserRepository
     let passwordHasher: BcryptPasswordHasher
     let tokenProvider: TokenAdapter
-    let sessionRepository: InMemorySessionRepository
     let configService: ConfigService
     let jwtService: JwtService
 
     beforeEach(() => {
         userRepository = new InMemoryUserRepository()
         passwordHasher = new BcryptPasswordHasher()
-        sessionRepository = new InMemorySessionRepository()
         configService = new ConfigService()
         jest.spyOn(configService, 'getOrThrow').mockImplementation((key: string) => {
             if (key === 'JWT_ACCESS_TOKEN_EXPIRY') return 3600
@@ -36,7 +33,7 @@ describe('LoginUseCase', () => {
         jwtService = new JwtService()
         tokenProvider = new TokenAdapter(jwtService, configService)
 
-        useCase = new LoginUseCase(userRepository, passwordHasher, tokenProvider, sessionRepository)
+        useCase = new LoginUseCase(userRepository, passwordHasher, tokenProvider)
     })
 
     const createValidUser = (): User => {
@@ -75,27 +72,19 @@ describe('LoginUseCase', () => {
         jest.spyOn(passwordHasher, 'compare').mockResolvedValue(true)
 
         const result = await useCase.execute(
-            { email: 'test@example.com', password: 'password123' },
-            '127.0.0.1',
-            'test-agent'
+            { email: 'test@example.com', password: 'password123' }
         )
 
         expect(result.user).toBe(user)
         expect(result.accessToken).toBeDefined()
         expect(result.refreshToken).toBeDefined()
-
-        // Assert session is created
-        const sessions = await sessionRepository.findAllByUserId(user.getId().getValue())
-        expect(sessions.length).toBe(1)
-        expect(sessions[0].userAgent).toBe('test-agent')
-        expect(sessions[0].ipAddress).toBe('127.0.0.1')
     })
 
     it('logIn - user does not exist', async () => {
         jest.spyOn(userRepository, 'findByEmail').mockResolvedValue(null)
 
         expect(
-            useCase.execute({ email: 'nonexistent@example.com', password: 'password123' }, '127.0.0.1', 'test-agent')
+            useCase.execute({ email: 'nonexistent@example.com', password: 'password123' })
         ).rejects.toThrow('Invalid credentials')
     })
 
@@ -105,7 +94,7 @@ describe('LoginUseCase', () => {
         jest.spyOn(passwordHasher, 'compare').mockResolvedValue(false)
 
         expect(
-            useCase.execute({ email: 'test@example.com', password: 'wrongpassword' }, '127.0.0.1', 'test-agent')
+            useCase.execute({ email: 'test@example.com', password: 'wrongpassword' })
         ).rejects.toThrow('Invalid credentials')
     })
 
@@ -115,7 +104,7 @@ describe('LoginUseCase', () => {
         jest.spyOn(passwordHasher, 'compare').mockResolvedValue(true)
 
         expect(
-            useCase.execute({ email: 'banned@example.com', password: 'password123' }, '127.0.0.1', 'test-agent')
+            useCase.execute({ email: 'banned@example.com', password: 'password123' })
         ).rejects.toThrow('User user-123 can not login.') // from CanNotLoginError
     })
 })

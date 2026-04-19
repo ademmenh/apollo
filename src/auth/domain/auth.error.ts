@@ -7,19 +7,13 @@ export class AuthError extends Error {
 
 export class InvalidTokenError extends AuthError {
     constructor() {
-        super('Invalid token')
+        super('Unauthorized')
     }
 }
 
 export class InvalidRefreshTokenError extends AuthError {
     constructor() {
-        super('Invalid refresh token')
-    }
-}
-
-export class SessionExpiredError extends AuthError {
-    constructor() {
-        super('Session expired')
+        super('Unauthorized')
     }
 }
 

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { ConfigService } from '@nestjs/config'
-import { ITokenProvider, UserPayload } from 'src/auth/domain/token-provider.interface'
+import { ITokenProvider, TokenPayload } from 'src/auth/domain/token-provider.interface'
 import { InvalidTokenError } from 'src/auth/domain/auth.error'
 import { TUserRole } from 'src/users/domain/value-objects/user-role.vo'
 
@@ -23,7 +23,7 @@ export class TokenAdapter implements ITokenProvider {
     }
 
     async generateAccessToken(userId: string, role: TUserRole): Promise<string> {
-        const payload: UserPayload = { sub: userId, role }
+        const payload: TokenPayload = { sub: userId, role }
         return this.jwtService.signAsync(payload, {
             secret: this.accessTokenSecret,
             expiresIn: this.accessTokenExpiry,
@@ -38,7 +38,7 @@ export class TokenAdapter implements ITokenProvider {
         })
     }
 
-    async validateAccessToken(token: string): Promise<UserPayload> {
+    async validateAccessToken(token: string): Promise<TokenPayload> {
         try {
             return await this.jwtService.verifyAsync(token, {
                 secret: this.accessTokenSecret,

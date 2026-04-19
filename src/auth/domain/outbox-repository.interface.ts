@@ -1,7 +1,9 @@
+import { OutboxEvent } from './outbox-event.entity'
+
 export interface IOutboxRepository {
-    getEventsFromCache(limit: number): Promise<any[]>
+    getEventsFromCache(limit: number): Promise<string[]>
     removeEventFromProcessing(event: string): Promise<void>
     recoverStuckCacheEvents(): Promise<number>
-    getEventsFromStorage(limit: number): Promise<any[]>
+    getEventsFromStorage(limit: number): Promise<OutboxEvent[]>
     markEventAsProcessed(id: string): Promise<void>
 }

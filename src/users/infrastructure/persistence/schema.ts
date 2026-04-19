@@ -2,15 +2,19 @@ import { pgTable, text, boolean, timestamp, uuid } from 'drizzle-orm/pg-core'
 
 export const usersTable = pgTable('users', {
     id: uuid('id').primaryKey(),
-    fullName: text('full_name').notNull(),
     email: text('email').unique(),
     password: text('password').notNull(), // Hashed
-    birthDate: timestamp('birth_date').notNull(),
     role: text('role').notNull(), // 'ADMIN', 'CLIENT', 'DRIVER'
-    phoneNumber: text('phone_number').unique().notNull(),
     isBanned: boolean('is_banned').default(false).notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     deletedAt: timestamp('deleted_at'),
+})
+
+export const profilesTable = pgTable('profiles', {
+    id: uuid('id').primaryKey().references(() => usersTable.id),
+    fullName: text('full_name').notNull(),
+    birthDate: timestamp('birth_date').notNull(),
+    phoneNumber: text('phone_number').unique().notNull(),
 })
 
 export const outboxEventsTable = pgTable('outbox_events', {

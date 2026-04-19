@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm'
 import { Batch, GlideClient } from '@valkey/valkey-glide'
 import { IOutboxRepository } from '../../domain/outbox-repository.interface'
 import { outboxEventsTable } from '../../../users/infrastructure/persistence/schema'
+import { OutboxEvent } from '../../domain/outbox-event.entity'
 
 @Injectable()
 export class OutboxRepository implements IOutboxRepository {
@@ -12,13 +13,15 @@ export class OutboxRepository implements IOutboxRepository {
         @Inject('VALKEY_CLIENT') private readonly valkey: GlideClient,
     ) { }
 
-    async getEventsFromCache(limit: number): Promise<any[]> {
+    async getEventsFromCache(limit: number): Promise<string[]> {
         const batch = new Batch(false)
         for (let i = 0; i < limit; i++) {
             batch.customCommand(['RPOPLPUSH', 'outbox:events', 'outbox:processing'])
         }
         const results = await this.valkey.exec(batch, true)
-        return results ? results.filter(Boolean) : []
+        if (!results) return []
+        
+        return results.filter((item): item is string => typeof item === 'string')
     }
 
     async removeEventFromProcessing(event: string): Promise<void> {
@@ -35,12 +38,14 @@ export class OutboxRepository implements IOutboxRepository {
         return movedCount
     }
 
-    async getEventsFromStorage(limit: number): Promise<any[]> {
-        return await this.db.select()
+    async getEventsFromStorage(limit: number): Promise<OutboxEvent[]> {
+        const results = await this.db.select()
             .from(outboxEventsTable)
             .where(eq(outboxEventsTable.status, 'PENDING'))
             .for('update', { skipLocked: true })
             .limit(limit)
+        
+        return results
     }
 
     async markEventAsProcessed(id: string): Promise<void> {

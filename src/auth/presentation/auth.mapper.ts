@@ -1,16 +1,14 @@
 import { User } from '../../users/domain/user.aggregate'
-import { User as UserDTO, UserRole } from './auth.types'
+import { UserRDTO, UserRole } from './auth.types'
 
 export class AuthMapper {
-    static toResponse(user: User): UserDTO {
+    static toResponse(user: User): UserRDTO {
         return {
             id: user.getId().getValue(),
             email: user.getEmail()?.getValue() ?? null,
-            fullName: user.getFullName(),
-            birthDate: user.getBirthDate(),
-            phoneNumber: user.getPhoneNumber()?.getValue() ?? null,
             role: user.getRole() as UserRole,
             createdAt: user.getCreatedAt(),
+            profile: user.getProfile().toResponse(),
         }
     }
 }

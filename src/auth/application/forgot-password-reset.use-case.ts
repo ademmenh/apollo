@@ -27,7 +27,5 @@ export class ForgotPasswordResetUseCase {
         const newPassword = await Password.create(newPasswordRaw, this.passwordHasher)
         user.changePassword(newPassword)
         await this.userRepository.update(user)
-        // deleted by TTL to avoid duplicate write
-        // await this.userRepository.removeForgotPasswordSecret(id)
     }
 }

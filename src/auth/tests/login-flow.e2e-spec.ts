@@ -62,7 +62,7 @@ describe('Auth - Login (E2E)', () => {
     it('login', async () => {
         const password = await Password.create('Password123!', passwordHasher)
         const user = User.create(UserId.create(randomUUID()), Email.create('login@example.com'), password, 'Client', PhoneNumber.create('0550123456'), 'John Doe', new Date('1990-01-01'))
-        await userRepository.save(user, { type: 'USER_VERIFIED', payload: { userId: user.getId().getValue(), hashedRefreshToken: 'dummy', userAgent: 'dummy', ipAddress: '127.0.0.1', role: user.getRole() } })
+        await userRepository.save(user)
 
         const res = await gql(app, `
             mutation Login($input: LoginInput!) {

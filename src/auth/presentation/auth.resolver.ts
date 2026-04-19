@@ -1,4 +1,4 @@
-import { Resolver, Mutation, Args, Context, Query } from '@nestjs/graphql'
+import { Resolver, Mutation, Args, Query } from '@nestjs/graphql'
 import { UseFilters, UseGuards } from '@nestjs/common'
 import { randomUUID } from 'crypto'
 import { RegisterUserUseCase } from '../application/register-user.use-case'
@@ -12,19 +12,18 @@ import { JwtRefreshGuard } from './guards/jwt-refresh.guard'
 import { JwtAccessGuard } from './guards/jwt-access.guard'
 import { AuthExceptionFilter } from './auth-exception.filter'
 import {
-    User,
-    LoginResponse,
-    RefreshResponse,
+    UserRDTO,
+    LoginRDTO,
+    RefreshRDTO,
     SuccessResponse,
-    RegisterUserInput,
-    LoginInput,
-    VerifyUserInput,
-    ForgotPasswordResetInput,
-    ResetPasswordInput,
+    RegisterUserDTO,
+    LoginDTO,
+    VerifyUserDTO,
+    ForgotPasswordResetDTO,
+    ResetPasswordDTO,
 } from './auth.types'
-import { UserD, RequestDataD } from './user.decorators'
-import type { RequestData } from './user.decorators'
-import type { UserPayload } from '../domain/token-provider.interface'
+import { UserD } from './user.decorators'
+import type { TokenPayload } from '../domain/token-provider.interface'
 import { AuthMapper } from './auth.mapper'
 
 @Resolver()
@@ -45,10 +44,10 @@ export class AuthResolver {
         return 'Auth service is running'
     }
 
-    @Mutation(() => User)
+    @Mutation(() => UserRDTO)
     async register(
-        @Args('input', { type: () => RegisterUserInput }) input: RegisterUserInput,
-    ): Promise<User> {
+        @Args('input', { type: () => RegisterUserDTO }) input: RegisterUserDTO,
+    ): Promise<UserRDTO> {
         const user = await this.registerUserUseCase.execute({
             id: randomUUID(),
             ...input,
@@ -56,41 +55,28 @@ export class AuthResolver {
         return AuthMapper.toResponse(user)
     }
 
-    @Mutation(() => LoginResponse)
+    @Mutation(() => SuccessResponse)
     async verify(
-        @Args('input', { type: () => VerifyUserInput }) input: VerifyUserInput,
-        @RequestDataD() reqData: RequestData,
-    ): Promise<LoginResponse> {
-        const { user, ...tokens } = await this.verifyUserUseCase.execute(
-            input.id, input.code, reqData.ip, reqData.userAgent,
-        )
-        return { user: AuthMapper.toResponse(user), ...tokens }
+        @Args('input', { type: () => VerifyUserDTO }) input: VerifyUserDTO,
+    ): Promise<SuccessResponse> {
+        await this.verifyUserUseCase.execute(input.id, input.code)
+        return { message: 'User verified successfully' }
     }
 
-    @Mutation(() => LoginResponse)
+    @Mutation(() => LoginRDTO)
     async login(
-        @Args('input', { type: () => LoginInput }) input: LoginInput,
-        @RequestDataD() reqData: RequestData,
-    ): Promise<LoginResponse> {
-        const { user, ...tokens } = await this.loginUseCase.execute(
-            input, reqData.ip, reqData.userAgent,
-        )
+        @Args('input', { type: () => LoginDTO }) input: LoginDTO,
+    ): Promise<LoginRDTO> {
+        const { user, ...tokens } = await this.loginUseCase.execute(input)
         return { user: AuthMapper.toResponse(user), ...tokens }
     }
 
-    @Mutation(() => RefreshResponse)
+    @Mutation(() => RefreshRDTO)
     @UseGuards(JwtRefreshGuard)
     async refresh(
-        @UserD() token: UserPayload,
-        @Context() context: any,
-        @RequestDataD() reqData: RequestData,
-    ): Promise<RefreshResponse> {
-        const authHeader = context.req.headers['authorization']
-        const refreshToken = authHeader ? authHeader.split(' ')[1] : ''
+        @UserD() token: TokenPayload,
+    ): Promise<RefreshRDTO> {
         return this.refreshLoginUseCase.execute({
-            refreshToken,
-            ip: reqData.ip,
-            userAgent: reqData.userAgent,
             userId: token.sub,
             role: token.role,
         })
@@ -106,7 +92,7 @@ export class AuthResolver {
 
     @Mutation(() => SuccessResponse)
     async resetForgotPassword(
-        @Args('input', { type: () => ForgotPasswordResetInput }) input: ForgotPasswordResetInput,
+        @Args('input', { type: () => ForgotPasswordResetDTO }) input: ForgotPasswordResetDTO,
     ): Promise<SuccessResponse> {
         await this.forgotPasswordResetUseCase.execute(input.id, input.secret, input.newPassword)
         return { message: 'Password reset successfully' }
@@ -115,7 +101,7 @@ export class AuthResolver {
     @Mutation(() => SuccessResponse)
     @UseGuards(JwtAccessGuard)
     async changePassword(
-        @Args('input', { type: () => ResetPasswordInput }) input: ResetPasswordInput,
+        @Args('input', { type: () => ResetPasswordDTO }) input: ResetPasswordDTO,
     ): Promise<SuccessResponse> {
         await this.changePasswordUseCase.execute(input.id, input.oldPassword, input.newPassword)
         return { message: 'Password changed successfully' }

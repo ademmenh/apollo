@@ -12,16 +12,15 @@ import { ChangePasswordUseCase } from './application/change-password.use-case'
 import { RequestForgotPasswordUseCase } from './application/request-forgot-password.use-case'
 import { TokenAdapter } from './infrastructure/adapters/token.adapter'
 import { AuthEmailAdapter } from './infrastructure/adapters/auth-email.adapter'
-import { SessionsRepository } from './infrastructure/persistence/session.repository'
 import { JwtAccessStrategy } from './presentation/strategies/jwt-access.strategy'
 import { JwtRefreshStrategy } from './presentation/strategies/jwt-refresh.strategy'
 import { UsersModule } from '../users/users.module'
-import { AuthEventWorker } from './application/auth-event.worker'
-import { AuthPersistenceWorker } from './application/auth-persistence.worker'
-import { AuthRecoveryWorker } from './application/auth-recovery.worker'
 import { OutboxRepository } from './infrastructure/persistence/outbox.repository'
 import { JwtAccessGuard } from './presentation/guards/jwt-access.guard'
 import { MailModule } from '../config/infrastructure/mail.module'
+import { EmailOutboxWorker } from './infrastructure/workers/email-outbox.worker'
+import { SendVerificationEmailUseCase } from './application/send-verification-email.use-case'
+import { SendPasswordResetEmailUseCase } from './application/send-password-reset-email.use-case'
 
 @Module({
     imports: [
@@ -56,16 +55,12 @@ import { MailModule } from '../config/infrastructure/mail.module'
         JwtAccessStrategy,
         JwtRefreshStrategy,
         JwtAccessGuard,
-        AuthEventWorker,
-        AuthPersistenceWorker,
-        AuthRecoveryWorker,
+        SendVerificationEmailUseCase,
+        SendPasswordResetEmailUseCase,
+        EmailOutboxWorker,
         {
             provide: 'IEmailAdapter',
             useClass: AuthEmailAdapter,
-        },
-        {
-            provide: 'ISessionRepository',
-            useClass: SessionsRepository,
         },
         {
             provide: 'IOutboxRepository',
