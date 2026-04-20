@@ -8,7 +8,7 @@ import { sql } from 'drizzle-orm'
 import { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { AppModule } from '../../module'
 import { GlideClient } from '@valkey/valkey-glide'
-import { usersTable } from 'src/users/infrastructure/schema'
+import { usersTable, profilesTable } from 'src/users/infrastructure/schema'
 import { LoggerStore } from 'src/config/infrastructure/loggers'
 import { Logger } from 'src/common/infrastructure/logger'
 
@@ -58,13 +58,14 @@ describe('Auth - Password Flow (E2E)', () => {
     })
 
     beforeEach(async () => {
+        await db.execute(sql`DELETE FROM ${profilesTable}`)
         await db.execute(sql`DELETE FROM ${usersTable}`)
         await valkeyClient.customCommand(['FLUSHALL'])
     })
 
     async function registerAndVerify(email: string, password: string, phone: string) {
         const regRes = await gql(app, `
-            mutation Register($input: RegisterUserInput!) {
+            mutation Register($input: RegisterUserDTO!) {
                 register(input: $input) { id }
             }
         `, {
@@ -78,17 +79,22 @@ describe('Auth - Password Flow (E2E)', () => {
         })
         const userId = regRes.body.data.register.id
         const verifyRes = await gql(app, `
-            mutation Verify($input: VerifyUserInput!) {
-                verify(input: $input) {
-                    user { id }
-                    accessToken
-                    refreshToken
-                }
+            mutation Verify($input: VerifyUserDTO!) {
+                verify(input: $input) { message }
             }
         `, { input: { id: userId, code: lastVerificationCode } })
+        expect(verifyRes.body.errors).toBeUndefined()
+
+        const loginRes = await gql(app, `
+            mutation Login($input: LoginDTO!) {
+                login(input: $input) { accessToken }
+            }
+        `, { input: { email, password } })
+        expect(loginRes.body.errors).toBeUndefined()
+
         return {
             userId,
-            accessToken: verifyRes.body.data.verify.accessToken,
+            accessToken: loginRes.body.data.login.accessToken,
         }
     }
 
@@ -104,7 +110,7 @@ describe('Auth - Password Flow (E2E)', () => {
         expect(requestRes.body.data.requestForgotPassword.message).toBe('Reset code sent to your email')
         // Reset password
         const resetRes = await gql(app, `
-            mutation ResetForgotPassword($input: ForgotPasswordResetInput!) {
+            mutation ResetForgotPassword($input: ForgotPasswordResetDTO!) {
                 resetForgotPassword(input: $input) { message }
             }
         `, {
@@ -118,7 +124,7 @@ describe('Auth - Password Flow (E2E)', () => {
         expect(resetRes.body.data.resetForgotPassword.message).toBe('Password reset successfully')
         // Login with new password
         const loginRes = await gql(app, `
-            mutation Login($input: LoginInput!) {
+            mutation Login($input: LoginDTO!) {
                 login(input: $input) {
                     user { id }
                     accessToken
@@ -138,7 +144,7 @@ describe('Auth - Password Flow (E2E)', () => {
         const { userId, accessToken } = await registerAndVerify('change@example.com', 'OldPassword123!', '0550333444')
         // Login to confirm current password works
         const loginRes = await gql(app, `
-            mutation Login($input: LoginInput!) {
+            mutation Login($input: LoginDTO!) {
                 login(input: $input) { accessToken }
             }
         `, { input: { email: 'change@example.com', password: 'OldPassword123!' } })
@@ -150,7 +156,7 @@ describe('Auth - Password Flow (E2E)', () => {
             .set('Authorization', `Bearer ${token}`)
             .send({
                 query: `
-                    mutation ChangePassword($input: ResetPasswordInput!) {
+                    mutation ChangePassword($input: ResetPasswordDTO!) {
                         changePassword(input: $input) { message }
                     }
                 `,
@@ -166,14 +172,14 @@ describe('Auth - Password Flow (E2E)', () => {
         expect(changeRes.body.data.changePassword.message).toBe('Password changed successfully')
         // Old password should fail
         const loginFail = await gql(app, `
-            mutation Login($input: LoginInput!) {
+            mutation Login($input: LoginDTO!) {
                 login(input: $input) { accessToken }
             }
         `, { input: { email: 'change@example.com', password: 'OldPassword123!' } })
         expect(loginFail.body.errors).toBeDefined()
         // New password should work
         const loginSuccess = await gql(app, `
-            mutation Login($input: LoginInput!) {
+            mutation Login($input: LoginDTO!) {
                 login(input: $input) { accessToken }
             }
         `, { input: { email: 'change@example.com', password: 'BrandNewPassword321!' } })

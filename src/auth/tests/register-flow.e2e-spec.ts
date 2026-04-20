@@ -8,7 +8,7 @@ import { sql } from 'drizzle-orm'
 import * as crypto from 'crypto'
 import { GlideClient } from '@valkey/valkey-glide'
 import { AppModule } from '../../module'
-import { usersTable } from 'src/users/infrastructure/schema'
+import { usersTable, profilesTable } from 'src/users/infrastructure/schema'
 import { LoggerStore } from 'src/config/infrastructure/loggers'
 import { Logger } from 'src/common/infrastructure/logger'
 
@@ -61,17 +61,20 @@ describe('Auth - Register (E2E)', () => {
     })
 
     beforeEach(async () => {
+        await db.execute(sql`DELETE FROM ${profilesTable}`)
         await db.execute(sql`DELETE FROM ${usersTable}`)
         await valkey.customCommand(['FLUSHALL'])
     })
 
     it('register client', async () => {
         const res = await gql(app, `
-            mutation Register($input: RegisterUserInput!) {
+            mutation Register($input: RegisterUserDTO!) {
                 register(input: $input) {
                     id
                     email
-                    fullName
+                    profile {
+                        fullName
+                    }
                     role
                 }
             }
@@ -88,7 +91,7 @@ describe('Auth - Register (E2E)', () => {
         expect(res.status).toBe(200)
         expect(res.body.errors).toBeUndefined()
         expect(res.body.data.register.email).toBe('client@example.com')
-        expect(res.body.data.register.fullName).toBe('John Doe')
+        expect(res.body.data.register.profile.fullName).toBe('John Doe')
         const userId = res.body.data.register.id
 
         // User should NOT be in DB yet (pending verification)
@@ -97,18 +100,14 @@ describe('Auth - Register (E2E)', () => {
 
         // Verify
         const verifyRes = await gql(app, `
-            mutation Verify($input: VerifyUserInput!) {
-                verify(input: $input) {
-                    user { id email }
-                    accessToken
-                    refreshToken
-                }
+            mutation Verify($input: VerifyUserDTO!) {
+                verify(input: $input) { message }
             }
         `, { input: { id: userId, code: lastVerificationCode } })
 
         expect(verifyRes.status).toBe(200)
         expect(verifyRes.body.errors).toBeUndefined()
-        expect(verifyRes.body.data.verify.accessToken).toBeDefined()
+        expect(verifyRes.body.data.verify.message).toBe('User verified successfully')
 
         // Now user IS in DB
         user = await db.select().from(usersTable).where(sql`email = 'client@example.com'`)
@@ -117,7 +116,7 @@ describe('Auth - Register (E2E)', () => {
 
     it('invalid email', async () => {
         const res = await gql(app, `
-            mutation Register($input: RegisterUserInput!) {
+            mutation Register($input: RegisterUserDTO!) {
                 register(input: $input) { id }
             }
         `, {
@@ -136,7 +135,7 @@ describe('Auth - Register (E2E)', () => {
 
     it('phone number already exists', async () => {
         await gql(app, `
-            mutation Register($input: RegisterUserInput!) {
+            mutation Register($input: RegisterUserDTO!) {
                 register(input: $input) { id }
             }
         `, {
@@ -150,7 +149,7 @@ describe('Auth - Register (E2E)', () => {
         })
 
         const res = await gql(app, `
-            mutation Register($input: RegisterUserInput!) {
+            mutation Register($input: RegisterUserDTO!) {
                 register(input: $input) { id }
             }
         `, {
@@ -168,8 +167,8 @@ describe('Auth - Register (E2E)', () => {
 
     it('register driver', async () => {
         const res = await gql(app, `
-            mutation Register($input: RegisterUserInput!) {
-                register(input: $input) { id email fullName }
+            mutation Register($input: RegisterUserDTO!) {
+                register(input: $input) { id email profile { fullName } }
             }
         `, {
             input: {
@@ -189,8 +188,8 @@ describe('Auth - Register (E2E)', () => {
         expect(user.length).toBe(0)
 
         const verifyRes = await gql(app, `
-            mutation Verify($input: VerifyUserInput!) {
-                verify(input: $input) { user { id } }
+            mutation Verify($input: VerifyUserDTO!) {
+                verify(input: $input) { message }
             }
         `, { input: { id: userId, code: lastVerificationCode } })
 
@@ -201,7 +200,7 @@ describe('Auth - Register (E2E)', () => {
 
     it('missing phone number', async () => {
         const res = await gql(app, `
-            mutation Register($input: RegisterUserInput!) {
+            mutation Register($input: RegisterUserDTO!) {
                 register(input: $input) { id }
             }
         `, {
@@ -218,7 +217,7 @@ describe('Auth - Register (E2E)', () => {
 
     it('password too short', async () => {
         const res = await gql(app, `
-            mutation Register($input: RegisterUserInput!) {
+            mutation Register($input: RegisterUserDTO!) {
                 register(input: $input) { id }
             }
         `, {
@@ -236,7 +235,7 @@ describe('Auth - Register (E2E)', () => {
 
     it('phone number already exists (driver)', async () => {
         await gql(app, `
-            mutation Register($input: RegisterUserInput!) {
+            mutation Register($input: RegisterUserDTO!) {
                 register(input: $input) { id }
             }
         `, {
@@ -250,7 +249,7 @@ describe('Auth - Register (E2E)', () => {
         })
 
         const res = await gql(app, `
-            mutation Register($input: RegisterUserInput!) {
+            mutation Register($input: RegisterUserDTO!) {
                 register(input: $input) { id }
             }
         `, {

@@ -105,10 +105,10 @@ export class UserRepository implements IUserRepository {
     async getNotVerifiedUser(id: string): Promise<{ user: User; codeHash: string; attempts: number } | null> {
         const key = `user:not-verified:${id}`
         const data = await GlideJson.get(this.valkey, key)
-        if (!data) return null
-        if (typeof data !== 'string') return null
-        const parsed = JSON.parse(data)
-        const userPersistence = parsed.user as { usersTable: any; profilesTable: any }
+        const parsed = this.parseGlideJson<{ user: { usersTable: any; profilesTable: any }; codeHash: string; attempts: number }>(data)
+        if (!parsed) return null
+
+        const userPersistence = parsed.user
         if (userPersistence.usersTable.createdAt) userPersistence.usersTable.createdAt = new Date(userPersistence.usersTable.createdAt)
         if (userPersistence.usersTable.deletedAt) userPersistence.usersTable.deletedAt = new Date(userPersistence.usersTable.deletedAt)
         if (userPersistence.profilesTable.birthDate) userPersistence.profilesTable.birthDate = new Date(userPersistence.profilesTable.birthDate)
@@ -124,22 +124,23 @@ export class UserRepository implements IUserRepository {
         if (!userId) return null
         const key = `user:not-verified:${userId}`
         const data = await GlideJson.get(this.valkey, key)
-        const userd = this.parseGlideJson<{ user: { usersTable: any; profilesTable: any }; codeHash: string; attempts: number }>(data)
-        if (!userd) return null
-        const userPersistence = userd.user
+        const parsed = this.parseGlideJson<{ user: { usersTable: any; profilesTable: any }; codeHash: string; attempts: number }>(data)
+        if (!parsed) return null
+
+        const userPersistence = parsed.user
         if (userPersistence.usersTable.createdAt) userPersistence.usersTable.createdAt = new Date(userPersistence.usersTable.createdAt)
         if (userPersistence.usersTable.deletedAt) userPersistence.usersTable.deletedAt = new Date(userPersistence.usersTable.deletedAt)
         if (userPersistence.profilesTable.birthDate) userPersistence.profilesTable.birthDate = new Date(userPersistence.profilesTable.birthDate)
         return {
             user: UserMapper.toDomain(userPersistence.usersTable, userPersistence.profilesTable),
-            codeHash: userd.codeHash,
-            attempts: userd.attempts,
+            codeHash: parsed.codeHash,
+            attempts: parsed.attempts,
         }
     }
 
     async removeNotVerifiedUser(id: string): Promise<void> {
         const key = `user:not-verified:${id}`
-        await GlideJson.del(this.valkey, key)
+        await this.valkey.del([key])
     }
 
     async saveForgotPasswordSecret(userId: string, codeHash: string, code: string, attempts: number, eventPayload: { type: string; payload: any }): Promise<void> {

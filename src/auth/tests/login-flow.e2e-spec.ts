@@ -13,7 +13,7 @@ import { UserId } from 'src/users/domain/userId'
 import { Email } from 'src/users/domain/email'
 import { Password } from 'src/users/domain/password'
 import { PhoneNumber } from 'src/users/domain/phone-number'
-import { usersTable } from 'src/users/infrastructure/schema'
+import { usersTable, profilesTable } from 'src/users/infrastructure/schema'
 import { GlideClient } from '@valkey/valkey-glide'
 import { IUserRepository } from 'src/users/domain/repository'
 import { LoggerStore } from 'src/config/infrastructure/loggers'
@@ -55,6 +55,7 @@ describe('Auth - Login (E2E)', () => {
     })
 
     beforeEach(async () => {
+        await db.execute(sql`DELETE FROM ${profilesTable}`)
         await db.execute(sql`DELETE FROM ${usersTable}`)
         await valkey.customCommand(['FLUSHALL'])
     })
@@ -65,9 +66,9 @@ describe('Auth - Login (E2E)', () => {
         await userRepository.save(user)
 
         const res = await gql(app, `
-            mutation Login($input: LoginInput!) {
+            mutation Login($input: LoginDTO!) {
                 login(input: $input) {
-                    user { id email fullName }
+                    user { id email profile { fullName } }
                     accessToken
                     refreshToken
                 }
@@ -83,12 +84,12 @@ describe('Auth - Login (E2E)', () => {
         expect(res.body.errors).toBeUndefined()
         expect(res.body.data.login.accessToken).toBeDefined()
         expect(res.body.data.login.refreshToken).toBeDefined()
-        expect(res.body.data.login.user.email).toBe('login@example.com')
+        expect(res.body.data.login.user.profile.fullName).toBe('John Doe')
     })
 
     it('invalid credentials', async () => {
         const res = await gql(app, `
-            mutation Login($input: LoginInput!) {
+            mutation Login($input: LoginDTO!) {
                 login(input: $input) {
                     user { id }
                     accessToken

@@ -5,7 +5,7 @@ import { DrizzleModule } from '../../config/infrastructure/drizzle-module'
 import { ValkeyModule } from '../../config/infrastructure/valkey-module'
 import { ConfigModule } from '../../config/module'
 import { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { usersTable } from '../infrastructure/schema'
+import { usersTable, profilesTable } from '../infrastructure/schema'
 import { User } from '../domain/entity'
 import { UserId } from '../domain/userId'
 import { Email } from '../domain/email'
@@ -39,6 +39,7 @@ describe('UserRepository (Integration)', () => {
     })
 
     afterEach(async () => {
+        await db.execute(sql`DELETE FROM ${profilesTable}`)
         await db.execute(sql`DELETE FROM ${usersTable}`)
     })
 

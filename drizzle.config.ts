@@ -3,7 +3,7 @@ import { config } from 'dotenv';
 config({ path: '.env.dev', override: true });
 
 export default defineConfig({
-    schema: './src/**/infrastructure/persistence/schema.ts',
+    schema: './src/**/infrastructure/schema.ts',
     out: './drizzle',
     dialect: 'postgresql',
     dbCredentials: {
