@@ -2,15 +2,15 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, jest } from 'bun
 import { Test, TestingModule } from '@nestjs/testing'
 import { INestApplication } from '@nestjs/common'
 import request from 'supertest'
-import * as crypto from 'crypto'
-import { AppModule } from '../../app.module'
-import { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { usersTable } from '../../users/infrastructure/persistence/schema'
-import { sql } from 'drizzle-orm'
-import { GlideClient } from '@valkey/valkey-glide'
-import { LoggerStore } from '../../config/infrastructure/loggers'
-import { Logger } from '../../common/presentation/logger'
 import * as winston from 'winston'
+import * as crypto from 'crypto'
+import { sql } from 'drizzle-orm'
+import { NodePgDatabase } from 'drizzle-orm/node-postgres'
+import { AppModule } from '../../module'
+import { GlideClient } from '@valkey/valkey-glide'
+import { usersTable } from 'src/users/infrastructure/schema'
+import { LoggerStore } from 'src/config/infrastructure/loggers'
+import { Logger } from 'src/common/infrastructure/logger'
 
 function gql(app: INestApplication, query: string, variables: Record<string, any> = {}) {
     return request(app.getHttpServer())

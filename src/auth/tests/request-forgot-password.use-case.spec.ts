@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, jest } from 'bun:test'
-import { RequestForgotPasswordUseCase } from '../application/request-forgot-password.use-case'
-import { InMemoryUserRepository } from '../../users/infrastructure/persistence/in-memory-user.repository'
-import { BcryptPasswordHasher } from 'src/users/infrastructure/security/bcrypt-password-hasher'
-import { User } from '../../users/domain/user.aggregate'
-import { UserId } from '../../users/domain/value-objects/user-id.vo'
-import { Email } from '../../users/domain/value-objects/email.vo'
-import { PhoneNumber } from '../../users/domain/value-objects/phone-number.vo'
-import { Password } from '../../users/domain/value-objects/password.vo'
+import { RequestForgotPasswordUseCase } from '../application/request-forgot-password'
+import { InMemoryUserRepository } from 'src/users/infrastructure/in-memory-repository'
+import { BcryptPasswordHasher } from 'src/users/infrastructure/bcrypt-password'
+import { User } from 'src/users/domain/entity'
+import { UserId } from 'src/users/domain/userId'
+import { Email } from 'src/users/domain/email'
+import { PhoneNumber } from 'src/users/domain/phone-number'
+import { Password } from 'src/users/domain/password'
 
 describe('RequestForgotPasswordUseCase', () => {
     let useCase: RequestForgotPasswordUseCase
@@ -28,9 +28,9 @@ describe('RequestForgotPasswordUseCase', () => {
         await userRepository.save(user)
 
         const spy = jest.spyOn(userRepository, 'saveForgotPasswordSecret')
-        
+
         await useCase.execute('test@example.com')
-        
+
         expect(spy).toHaveBeenCalled()
         const args = spy.mock.calls[0]
         expect(args[4]).toBeDefined()

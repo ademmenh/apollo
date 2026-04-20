@@ -1,4 +1,4 @@
-import { Logger } from '../../common/presentation/logger'
+import { Logger } from '../../common/infrastructure/logger'
 
 export class LoggerStore {
     static app: Logger

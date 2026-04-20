@@ -1,9 +1,9 @@
 import { NestFactory } from '@nestjs/core'
 import { ConfigService } from '@nestjs/config'
-import { AppModule } from './app.module'
-import { DrizzleExceptionFilter } from './common/presentation/filters/drizzle-exception.filter'
-import { ResponseLoggingInterceptor } from './common/presentation/logger.interceptor'
-import { Logger } from './common/presentation/logger'
+import { AppModule } from './module'
+import { DrizzleExceptionFilter } from './common/presentation/drizzle-exception-filter'
+import { ResponseLoggingInterceptor } from './common/infrastructure/logger-interceptor'
+import { Logger } from './common/infrastructure/logger'
 import { DailyRotateFile } from 'winston/lib/winston/transports'
 import { LoggerStore } from './config/infrastructure/loggers'
 

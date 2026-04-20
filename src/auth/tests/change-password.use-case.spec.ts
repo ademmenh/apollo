@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach } from 'bun:test'
-import { ChangePasswordUseCase } from '../application/change-password.use-case'
-import { InMemoryUserRepository } from '../../users/infrastructure/persistence/in-memory-user.repository'
-import { BcryptPasswordHasher } from 'src/users/infrastructure/security/bcrypt-password-hasher'
-import { User } from 'src/users/domain/user.aggregate'
-import { UserId } from 'src/users/domain/value-objects/user-id.vo'
-import { Email } from 'src/users/domain/value-objects/email.vo'
-import { Password } from 'src/users/domain/value-objects/password.vo'
+import { ChangePasswordUseCase } from '../application/change-password'
+import { InMemoryUserRepository } from '../../users/infrastructure/in-memory-repository'
+import { BcryptPasswordHasher } from 'src/users/infrastructure/bcrypt-password'
+import { User } from 'src/users/domain/entity'
+import { UserId } from 'src/users/domain/userId'
+import { Email } from 'src/users/domain/email'
+import { Password } from 'src/users/domain/password'
 import { BadRequestException, NotFoundException } from '@nestjs/common'
-import { PhoneNumber } from 'src/users/domain/value-objects/phone-number.vo'
+import { PhoneNumber } from 'src/users/domain/phone-number'
 
 describe('ChangePasswordUseCase', () => {
     let useCase: ChangePasswordUseCase

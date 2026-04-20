@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { PhoneNumber } from '../domain/value-objects/phone-number.vo'
-import { InvalidPhoneNumberError } from '../domain/user.errors'
+import { PhoneNumber } from '../domain/phone-number'
+import { InvalidPhoneNumberError } from '../domain/errors'
 
 describe('PhoneNumber', () => {
     describe('create', () => {

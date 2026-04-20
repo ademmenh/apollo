@@ -2,7 +2,7 @@ import { Inject, Injectable, Scope } from '@nestjs/common'
 import DataLoader from 'dataloader'
 import { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { inArray } from 'drizzle-orm'
-import { profilesTable } from './persistence/schema'
+import { profilesTable } from './schema'
 import { ProfileRDTO } from '../../auth/presentation/auth.types'
 
 @Injectable({ scope: Scope.REQUEST })

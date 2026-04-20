@@ -1,4 +1,4 @@
-import { OutboxEvent } from './outbox-event.entity'
+import { OutboxEvent } from './outbox-event'
 
 export interface IOutboxRepository {
     getEventsFromCache(limit: number): Promise<string[]>

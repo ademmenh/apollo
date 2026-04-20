@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, jest } from 'bun:test'
-import { RegisterUserCommand, RegisterUserUseCase } from '../application/register-user.use-case'
-import { InMemoryUserRepository } from '../../users/infrastructure/persistence/in-memory-user.repository'
-import { BcryptPasswordHasher } from 'src/users/infrastructure/security/bcrypt-password-hasher'
-import { MissingEmailError } from 'src/users/domain/user.errors'
+import { RegisterUserCommand, RegisterUserUseCase } from '../application/register-user'
+import { InMemoryUserRepository } from 'src/users/infrastructure/in-memory-repository'
+import { BcryptPasswordHasher } from 'src/users/infrastructure/bcrypt-password'
+import { MissingEmailError } from 'src/users/domain/errors'
 
 describe('RegisterUserUseCase', () => {
     let useCase: RegisterUserUseCase
@@ -40,7 +40,7 @@ describe('RegisterUserUseCase', () => {
             fullName: 'No Email User',
             birthDate: '1990-01-01',
         } as RegisterUserCommand
-        
+
         await expect(useCase.execute(command)).rejects.toThrow(MissingEmailError)
     })
 
