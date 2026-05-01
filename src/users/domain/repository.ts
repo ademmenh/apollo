@@ -17,5 +17,8 @@ export interface IUserRepository {
     getForgotPasswordSecret(userId: string): Promise<{ codeHash: string; code: string; attempts: number } | null>
     removeForgotPasswordSecret(userId: string): Promise<void>
     findProfilesByIds(ids: string[]): Promise<UserProfile[]>
-    findAll(): Promise<User[]>
+    findAll(limit: number, offset: number): Promise<User[]>
+    follow(followerId: string, followingId: string): Promise<void>
+    findFollowers(userId: string, limit: number, offset: number): Promise<UserProfile[]>
+    findFollowing(userId: string, limit: number, offset: number): Promise<UserProfile[]>
 }

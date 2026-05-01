@@ -38,6 +38,12 @@ type UserRDTO {
 
   """Date when the user was created"""
   createdAt: DateTime!
+
+  """The list of users following this user"""
+  followersList(limit: Int!, skip: Int!): [ProfileRDTO!]!
+
+  """The list of users this user is following"""
+  followingList(limit: Int!, skip: Int!): [ProfileRDTO!]!
 }
 
 enum UserRole {
@@ -45,12 +51,27 @@ enum UserRole {
   ADMIN
 }
 
+type SuccessResponse {
+  message: String!
+}
+
 type Query {
   healthCheck: String!
 
   """Retrieve a list of all registered users"""
-  users: [UserRDTO!]!
+  users(limit: Int!, skip: Int!): [UserRDTO!]!
 
   """Retrieve a single user by their ID"""
   user(id: ID!): UserRDTO
+
+  """Get followers of a user"""
+  followers(userId: ID!, limit: Int!, skip: Int!): [ProfileRDTO!]!
+
+  """Get users a user is following"""
+  following(userId: ID!, limit: Int!, skip: Int!): [ProfileRDTO!]!
+}
+
+type Mutation {
+  """Follow another user"""
+  followUser(followingId: ID!): SuccessResponse!
 }

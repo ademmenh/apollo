@@ -1,4 +1,4 @@
-import { pgTable, text, boolean, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { pgTable, text, boolean, timestamp, uuid, primaryKey } from 'drizzle-orm/pg-core'
 
 export const usersTable = pgTable('users', {
     id: uuid('id').primaryKey(),
@@ -16,3 +16,11 @@ export const profilesTable = pgTable('profiles', {
     birthDate: timestamp('birth_date').notNull(),
     phoneNumber: text('phone_number'),
 })
+
+export const followsTable = pgTable('follows', {
+    followerId: uuid('follower_id').references(() => usersTable.id).notNull(),
+    followingId: uuid('following_id').references(() => usersTable.id).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+    pk: primaryKey({ columns: [table.followerId, table.followingId] }),
+}))

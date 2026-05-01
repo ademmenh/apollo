@@ -1,5 +1,6 @@
+import { User } from '../domain/entity'
 import { UserProfile } from '../domain/user-profile'
-import { ProfileRDTO } from '../../auth/presentation/auth.types'
+import { type UserRDTO, type ProfileRDTO } from '../../auth/presentation/auth.types'
 
 export class ProfileMapper {
     static toResponse(profile: UserProfile): ProfileRDTO {
@@ -8,6 +9,18 @@ export class ProfileMapper {
             fullName: profile.getFullName(),
             birthDate: profile.getBirthDate(),
             phoneNumber: profile.getPhoneNumber()?.getValue() ?? null,
+        }
+    }
+}
+
+export class UserMapper {
+    static toResponse(u: User): UserRDTO {
+        return {
+            id: u.getId().getValue(),
+            email: u.getEmail()?.getValue() || null,
+            role: u.getRole() as any,
+            createdAt: u.getCreatedAt(),
+            profile: ProfileMapper.toResponse(u.getProfile())
         }
     }
 }

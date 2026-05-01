@@ -109,7 +109,7 @@ describe('Auth - Register (E2E)', () => {
         expect(res.status).toBe(400)
     })
 
-    it('register driver', async () => {
+    it('register client', async () => {
         const res = await request(app.getHttpServer())
             .post('/auth/register')
             .send({
@@ -145,7 +145,19 @@ describe('Auth - Register (E2E)', () => {
                 birthDate: '1992-05-01',
             })
 
-        expect(res.status).toBe(201) 
+        expect(res.status).toBe(201)
+    })
+
+    it('missing email', async () => {
+        const res = await request(app.getHttpServer())
+            .post('/auth/register')
+            .send({
+                password: 'Password123!',
+                fullName: 'Jane Smith',
+                birthDate: '1992-05-01',
+            })
+
+        expect(res.status).toBe(400)
     })
 
     it('password too short', async () => {

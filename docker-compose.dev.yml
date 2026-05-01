@@ -50,7 +50,6 @@ services:
         volumes:
             - nest_dev_logs:/app/logs
             - .:/app
-            - ./persistence:/app/persistence
         networks:
             - net
         ports:
@@ -58,7 +57,7 @@ services:
         healthcheck:
             test: [
                 "CMD-SHELL",
-                "bun -e \"import('http').then(h => h.get('http://localhost:${PORT}/health', r => process.exit(r.statusCode === 200 ? 0 : 1)))\""
+                "bun -e \"import('http').then(h => h.get('http://localhost:${PORT}/api/v${API_VERSION}/health', r => process.exit(r.statusCode === 200 ? 0 : 1)))\""
             ]
             interval: 30s
             timeout: 5s

@@ -5,7 +5,7 @@ import { DrizzleModule } from '../../config/infrastructure/drizzle-module'
 import { ValkeyModule } from '../../config/infrastructure/valkey-module'
 import { ConfigModule } from '../../config/module'
 import { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { usersTable, profilesTable } from '../infrastructure/schema'
+import { usersTable, profilesTable, followsTable } from '../infrastructure/schema'
 import { User } from '../domain/entity'
 import { UserId } from '../domain/userId'
 import { Email } from '../domain/email'
@@ -41,6 +41,7 @@ describe('UserRepository (Integration)', () => {
     })
 
     afterEach(async () => {
+        await db.execute(sql`DELETE FROM ${followsTable}`)
         await db.execute(sql`DELETE FROM ${profilesTable}`)
         await db.execute(sql`DELETE FROM ${usersTable}`)
     })
@@ -150,5 +151,54 @@ describe('UserRepository (Integration)', () => {
         await repository.removeNotVerified(userId.getValue())
         const cached = await repository.getNotVerified(userId.getValue())
         if (cached !== null) throw new Error('User should have been removed from Valkey')
+    })
+
+    it('should follow a user', async () => {
+        const user1Id = UserId.create(randomUUID())
+        const user2Id = UserId.create(randomUUID())
+        const user1 = User.create(user1Id, Email.create('user1@example.com'), await Password.create('Password123!', mockHasher), 'Client', null, 'User One', new Date())
+        const user2 = User.create(user2Id, Email.create('user2@example.com'), await Password.create('Password123!', mockHasher), 'Client', null, 'User Two', new Date())
+        await repository.save(user1)
+        await repository.save(user2)
+
+        await repository.follow(user1Id.getValue(), user2Id.getValue())
+
+        const followers = await repository.findFollowers(user2Id.getValue(), 10, 0)
+        expect(followers.length).toBe(1)
+        expect(followers[0].getId()).toBe(user1Id.getValue())
+    })
+
+    it('should find followers', async () => {
+        const user1Id = UserId.create(randomUUID())
+        const user2Id = UserId.create(randomUUID())
+        const user1 = User.create(user1Id, Email.create('user1@example.com'), await Password.create('Password123!', mockHasher), 'Client', null, 'User One', new Date())
+        const user2 = User.create(user2Id, Email.create('user2@example.com'), await Password.create('Password123!', mockHasher), 'Client', null, 'User Two', new Date())
+        await repository.save(user1)
+        await repository.save(user2)
+
+        await repository.follow(user1Id.getValue(), user2Id.getValue())
+
+        const followers = await repository.findFollowers(user2Id.getValue(), 10, 0)
+        expect(followers.length).toBe(1)
+        expect(followers[0].getId()).toBe(user1Id.getValue())
+    })
+
+    it('should find following with pagination', async () => {
+        const user1Id = UserId.create(randomUUID())
+        const user2Id = UserId.create(randomUUID())
+        const user1 = User.create(user1Id, Email.create('user1@example.com'), await Password.create('Password123!', mockHasher), 'Client', null, 'User One', new Date())
+        const user2 = User.create(user2Id, Email.create('user2@example.com'), await Password.create('Password123!', mockHasher), 'Client', null, 'User Two', new Date())
+        await repository.save(user1)
+        await repository.save(user2)
+
+        await repository.follow(user1Id.getValue(), user2Id.getValue())
+
+        const following = await repository.findFollowing(user1Id.getValue(), 10, 0)
+        expect(following.length).toBe(1)
+        expect(following[0].getId()).toBe(user2Id.getValue())
+
+        // Test pagination
+        const followingPaginated = await repository.findFollowing(user1Id.getValue(), 10, 1)
+        expect(followingPaginated.length).toBe(0)
     })
 })

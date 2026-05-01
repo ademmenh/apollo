@@ -1,4 +1,5 @@
 import { ExecutionContext, Injectable } from '@nestjs/common'
+import { GqlExecutionContext, GqlContextType } from '@nestjs/graphql'
 import { AuthGuard } from '@nestjs/passport'
 import { ExtractJwt, Strategy } from 'passport-jwt'
 import { PassportStrategy } from '@nestjs/passport'
@@ -9,6 +10,10 @@ import { TokenPayload } from '../domain/token-provider'
 @Injectable()
 export class JwtAccessGuard extends AuthGuard('jwt-access') {
     getRequest(context: ExecutionContext) {
+        if (context.getType<GqlContextType>() === 'graphql') {
+            const ctx = GqlExecutionContext.create(context)
+            return ctx.getContext().req
+        }
         return context.switchToHttp().getRequest()
     }
 }

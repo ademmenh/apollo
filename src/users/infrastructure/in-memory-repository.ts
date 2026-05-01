@@ -7,6 +7,7 @@ export class InMemoryUserRepository implements IUserRepository {
     private users: Map<string, User> = new Map()
     private notVerifiedUsers: Map<string, { user: User; codeHash: string; attempts: number }> = new Map()
     private forgotPasswordSecrets: Map<string, { codeHash: string; code: string; attempts: number }> = new Map()
+    private follows: Set<string> = new Set() // Store as "followerId:followingId"
 
     async save(user: User): Promise<User> {
         this.users.set(user.getId().getValue(), user)
@@ -78,8 +79,43 @@ export class InMemoryUserRepository implements IUserRepository {
         return results
     }
 
-    async findAll(): Promise<User[]> {
-        return Array.from(this.users.values())
+    async findAll(limit: number, offset: number): Promise<User[]> {
+        let results = Array.from(this.users.values())
+        results = results.slice(offset)
+        results = results.slice(0, limit)
+        return results
+    }
+
+    async follow(followerId: string, followingId: string): Promise<void> {
+        this.follows.add(`${followerId}:${followingId}`)
+    }
+
+    async findFollowers(userId: string, limit: number, offset: number): Promise<UserProfile[]> {
+        let followers: UserProfile[] = []
+        for (const follow of this.follows) {
+            const [followerId, followingId] = follow.split(':')
+            if (followingId === userId) {
+                const user = this.users.get(followerId)
+                if (user) followers.push(user.getProfile())
+            }
+        }
+        followers = followers.slice(offset)
+        followers = followers.slice(0, limit)
+        return followers
+    }
+
+    async findFollowing(userId: string, limit: number, offset: number): Promise<UserProfile[]> {
+        let following: UserProfile[] = []
+        for (const follow of this.follows) {
+            const [followerId, followingId] = follow.split(':')
+            if (followerId === userId) {
+                const user = this.users.get(followingId)
+                if (user) following.push(user.getProfile())
+            }
+        }
+        following = following.slice(offset)
+        following = following.slice(0, limit)
+        return following
     }
 
     // Helper for tests
@@ -91,5 +127,6 @@ export class InMemoryUserRepository implements IUserRepository {
         this.users.clear()
         this.notVerifiedUsers.clear()
         this.forgotPasswordSecrets.clear()
+        this.follows.clear()
     }
 }

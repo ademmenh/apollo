@@ -8,7 +8,7 @@ export class GetUsersUseCase {
         @Inject('IUserRepository') private readonly userRepository: IUserRepository,
     ) { }
 
-    async execute(): Promise<User[]> {
-        return this.userRepository.findAll()
+    async execute(limit: number, offset: number): Promise<User[]> {
+        return this.userRepository.findAll(limit, offset)
     }
 }

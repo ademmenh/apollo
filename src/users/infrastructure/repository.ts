@@ -6,7 +6,7 @@ import { IUserRepository } from '../domain/repository'
 import { User } from '../domain/entity'
 import { UserProfile } from '../domain/user-profile'
 import { UserMapper } from './mapper'
-import { usersTable, profilesTable } from './schema'
+import { usersTable, profilesTable, followsTable } from './schema'
 import { eventsForOne } from '../../outbox/infrastructure/persistence/schema'
 import { OutboxEvent } from '../../outbox/domain/outbox-event.entity'
 
@@ -198,12 +198,47 @@ export class UserRepository implements IUserRepository {
         return results.map(r => UserMapper.toProfileDomain(r))
     }
 
-    async findAll(): Promise<User[]> {
+    async findAll(limit: number, offset: number): Promise<User[]> {
         const results = await this.db.select()
             .from(usersTable)
             .innerJoin(profilesTable, eq(usersTable.id, profilesTable.id))
+            .limit(limit)
+            .offset(offset)
 
         return results.map(r => UserMapper.toDomain(r.users, r.profiles))
+    }
+
+    async follow(followerId: string, followingId: string): Promise<void> {
+        await this.db.insert(followsTable).values({
+            followerId,
+            followingId,
+        }).onConflictDoNothing()
+    }
+
+    async findFollowers(userId: string, limit: number, offset: number): Promise<UserProfile[]> {
+        const results = await this.db.select({
+            profile: profilesTable
+        })
+            .from(followsTable)
+            .innerJoin(profilesTable, eq(followsTable.followerId, profilesTable.id))
+            .where(eq(followsTable.followingId, userId))
+            .limit(limit)
+            .offset(offset)
+
+        return results.map(r => UserMapper.toProfileDomain(r.profile))
+    }
+
+    async findFollowing(userId: string, limit: number, offset: number): Promise<UserProfile[]> {
+        const results = await this.db.select({
+            profile: profilesTable
+        })
+            .from(followsTable)
+            .innerJoin(profilesTable, eq(followsTable.followingId, profilesTable.id))
+            .where(eq(followsTable.followerId, userId))
+            .limit(limit)
+            .offset(offset)
+
+        return results.map(r => UserMapper.toProfileDomain(r.profile))
     }
 
     private parseGlideJson<T>(value: GlideString | (GlideString | null)[] | null): T | null {
