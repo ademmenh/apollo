@@ -2,10 +2,18 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+"""User profile information"""
 type ProfileRDTO {
+  """Unique identifier of the profile"""
   id: ID!
+
+  """Full name of the user"""
   fullName: String!
+
+  """Birth date of the user"""
   birthDate: DateTime!
+
+  """Phone number of the user"""
   phoneNumber: String
 }
 
@@ -14,11 +22,21 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+"""System user account"""
 type UserRDTO {
+  """Unique identifier of the user"""
   id: ID!
+
+  """Email address of the user"""
   email: String
+
+  """Role of the user in the system"""
   role: UserRole!
+
+  """Profile details of the user"""
   profile: ProfileRDTO!
+
+  """Date when the user was created"""
   createdAt: DateTime!
 }
 
@@ -27,61 +45,12 @@ enum UserRole {
   ADMIN
 }
 
-type LoginRDTO {
-  user: UserRDTO!
-  accessToken: String!
-  refreshToken: String!
-}
-
-type RefreshRDTO {
-  accessToken: String!
-  refreshToken: String!
-}
-
-type SuccessResponse {
-  message: String!
-}
-
 type Query {
   healthCheck: String!
-}
 
-type Mutation {
-  register(input: RegisterUserDTO!): UserRDTO!
-  verify(input: VerifyUserDTO!): SuccessResponse!
-  login(input: LoginDTO!): LoginRDTO!
-  refresh: RefreshRDTO!
-  requestForgotPassword(email: String!): SuccessResponse!
-  resetForgotPassword(input: ForgotPasswordResetDTO!): SuccessResponse!
-  changePassword(input: ResetPasswordDTO!): SuccessResponse!
-}
+  """Retrieve a list of all registered users"""
+  users: [UserRDTO!]!
 
-input RegisterUserDTO {
-  email: String!
-  fullName: String!
-  birthDate: String!
-  password: String!
-  phoneNumber: String!
-}
-
-input VerifyUserDTO {
-  id: ID!
-  code: String!
-}
-
-input LoginDTO {
-  email: String!
-  password: String!
-}
-
-input ForgotPasswordResetDTO {
-  id: ID!
-  secret: String!
-  newPassword: String!
-}
-
-input ResetPasswordDTO {
-  id: ID!
-  oldPassword: String!
-  newPassword: String!
+  """Retrieve a single user by their ID"""
+  user(id: ID!): UserRDTO
 }

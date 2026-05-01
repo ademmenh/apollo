@@ -9,36 +9,36 @@ registerEnumType(UserRole, {
     name: 'UserRole',
 })
 
-@ObjectType()
+@ObjectType({ description: 'User profile information' })
 export class ProfileRDTO {
-    @Field(() => ID)
+    @Field(() => ID, { description: 'Unique identifier of the profile' })
     id: string
 
-    @Field(() => String)
+    @Field(() => String, { description: 'Full name of the user' })
     fullName: string
 
-    @Field(() => GraphQLISODateTime)
+    @Field(() => GraphQLISODateTime, { description: 'Birth date of the user' })
     birthDate: Date
 
-    @Field(() => String, { nullable: true })
+    @Field(() => String, { nullable: true, description: 'Phone number of the user' })
     phoneNumber: string | null
 }
 
-@ObjectType()
+@ObjectType({ description: 'System user account' })
 export class UserRDTO {
-    @Field(() => ID)
+    @Field(() => ID, { description: 'Unique identifier of the user' })
     id: string
 
-    @Field(() => String, { nullable: true })
+    @Field(() => String, { nullable: true, description: 'Email address of the user' })
     email: string | null
 
-    @Field(() => UserRole)
+    @Field(() => UserRole, { description: 'Role of the user in the system' })
     role: UserRole
 
-    @Field(() => ProfileRDTO)
+    @Field(() => ProfileRDTO, { description: 'Profile details of the user' })
     profile: ProfileRDTO
 
-    @Field(() => GraphQLISODateTime)
+    @Field(() => GraphQLISODateTime, { description: 'Date when the user was created' })
     createdAt: Date
 }
 

@@ -1,41 +1,39 @@
 import { NestFactory } from '@nestjs/core'
 import { ConfigService } from '@nestjs/config'
 import { AppModule } from './module'
-import { DrizzleExceptionFilter } from './common/presentation/drizzle-exception-filter'
-import { ResponseLoggingInterceptor } from './common/infrastructure/logger-interceptor'
-import { Logger } from './common/infrastructure/logger'
-import { transports } from 'winston'
-import DailyRotateFile from 'winston-daily-rotate-file'
-import { LoggerStore } from './config/infrastructure/loggers'
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 
 async function bootstrap() {
-    const appLogger = new Logger([
-        new DailyRotateFile({
-            filename: 'logs/app-%DATE%.log',
-            datePattern: 'YYYY-MM-DD',
-            zippedArchive: true,
-            maxSize: '20m',
-            maxFiles: '120d',
-        }),
-        new transports.Console()
-    ])
-    const workerLogger = new Logger([
-        new DailyRotateFile({
-            filename: 'logs/worker-%DATE%.log',
-            datePattern: 'YYYY-MM-DD',
-            zippedArchive: true,
-            maxSize: '20m',
-            maxFiles: '120d',
-        }),
-        new transports.Console()
-    ])
-    LoggerStore.app = appLogger
-    LoggerStore.worker = workerLogger
     const app = await NestFactory.create(AppModule)
-    app.useGlobalInterceptors(new ResponseLoggingInterceptor(appLogger.getLogger()))
-    app.useGlobalFilters(new DrizzleExceptionFilter())
     const configService = app.get(ConfigService)
+    const version = configService.getOrThrow<string>('API_VERSION')
+    app.setGlobalPrefix(`api/v${version}`)
     const port = configService.getOrThrow<string>('PORT')
+    const swaggerConfig = new DocumentBuilder()
+        .setTitle('Waslini API')
+        .setDescription('Waslini API Swagger documentation')
+        .setVersion(version)
+        .addBearerAuth(
+            {
+                type: 'http',
+                scheme: 'bearer',
+                bearerFormat: 'JWT',
+                description: 'Enter Access Token',
+            },
+            'access-token',
+        )
+        .addBearerAuth(
+            {
+                type: 'http',
+                scheme: 'bearer',
+                bearerFormat: 'JWT',
+                description: 'Enter Refresh Token',
+            },
+            'refresh-token',
+        )
+        .build()
+    const document = SwaggerModule.createDocument(app, swaggerConfig)
+    SwaggerModule.setup(`api/v${version}/docs`, app, document)
     await app.listen(port)
 }
 

@@ -3,7 +3,7 @@ import type { IEmailPort } from '../domain/email.port'
 import { PasswordResetEmailRequestedSchema } from '../infrastructure/events'
 
 @Injectable()
-export class SendPasswordResetEmailUseCase {
+export class SendPasswordResetUseCase {
     constructor(
         @Inject('IEmailAdapter') private readonly emailAdapter: IEmailPort,
     ) { }

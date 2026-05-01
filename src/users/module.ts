@@ -3,6 +3,9 @@ import { UserRepository } from './infrastructure/repository'
 import { BcryptPasswordHasher } from './infrastructure/bcrypt-password'
 import { UsersResolver } from './presentation/resolver'
 import { ProfileDataLoader } from './infrastructure/profile.dataloader'
+import { GetProfilesByIdsUseCase } from './application/get-profiles-by-ids'
+import { GetUsersUseCase } from './application/get-users'
+import { GetUserUseCase } from './application/get-user'
 
 @Module({
     controllers: [],
@@ -17,6 +20,9 @@ import { ProfileDataLoader } from './infrastructure/profile.dataloader'
         },
         UsersResolver,
         ProfileDataLoader,
+        GetProfilesByIdsUseCase,
+        GetUsersUseCase,
+        GetUserUseCase,
     ],
     exports: ['IUserRepository', 'IPasswordHasher'],
 })

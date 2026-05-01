@@ -60,3 +60,10 @@ export class MissingEmailError extends Error {
         this.name = 'MissingEmailError'
     }
 }
+
+export class ProfileNotFoundError extends Error {
+    constructor(userId: string) {
+        super(`Profile not found for user ${userId}`)
+        this.name = 'ProfileNotFoundError'
+    }
+}

@@ -5,14 +5,14 @@ export class UserProfile {
         private readonly id: string,
         private fullName: string,
         private birthDate: Date,
-        private phoneNumber: PhoneNumber,
+        private phoneNumber: PhoneNumber | null,
     ) { }
 
-    static create(id: string, fullName: string, birthDate: Date, phoneNumber: PhoneNumber): UserProfile {
+    static create(id: string, fullName: string, birthDate: Date, phoneNumber: PhoneNumber | null): UserProfile {
         return new UserProfile(id, fullName, birthDate, phoneNumber)
     }
 
-    static reconstruct(id: string, fullName: string, birthDate: Date, phoneNumber: PhoneNumber): UserProfile {
+    static reconstruct(id: string, fullName: string, birthDate: Date, phoneNumber: PhoneNumber | null): UserProfile {
         return new UserProfile(id, fullName, birthDate, phoneNumber)
     }
 
@@ -28,7 +28,7 @@ export class UserProfile {
         return this.birthDate
     }
 
-    getPhoneNumber(): PhoneNumber {
+    getPhoneNumber(): PhoneNumber | null {
         return this.phoneNumber
     }
 }

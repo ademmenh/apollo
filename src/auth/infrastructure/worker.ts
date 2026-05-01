@@ -1,10 +1,9 @@
 import { Injectable, Inject, OnModuleInit } from '@nestjs/common'
 import { Interval } from '@nestjs/schedule'
 import { type IOutboxRepository } from '../domain/outbox-repository.interface'
-import { LoggerStore } from '../../config/infrastructure/loggers'
-import type { Logger } from 'winston'
+import { Logger } from '../../common/infrastructure/logger'
 import { SendVerificationEmailUseCase } from '../application/send-verification-email'
-import { SendPasswordResetEmailUseCase } from '../application/send-password-reset-email'
+import { SendPasswordResetUseCase } from '../application/send-password-reset'
 import {
     VerificationEmailRequestedValidation,
     PasswordResetEmailRequestedValidation
@@ -12,15 +11,12 @@ import {
 
 @Injectable()
 export class EmailOutboxWorker implements OnModuleInit {
-    private logger: Logger
-
     constructor(
         @Inject('IOutboxRepository') private readonly outboxRepository: IOutboxRepository,
+        @Inject('WORKER_LOGGER') private readonly logger: Logger,
         private readonly sendVerificationEmailUseCase: SendVerificationEmailUseCase,
-        private readonly sendPasswordResetEmailUseCase: SendPasswordResetEmailUseCase,
-    ) {
-        this.logger = LoggerStore.getWorker().getLogger()
-    }
+        private readonly sendPasswordResetUseCase: SendPasswordResetUseCase,
+    ) { }
 
     async onModuleInit() {
         await this.recover()
@@ -62,7 +58,7 @@ export class EmailOutboxWorker implements OnModuleInit {
                 try {
                     if (event.type === 'PASSWORD_RESET_EMAIL_REQUESTED') {
                         const validated = PasswordResetEmailRequestedValidation(event.payload)
-                        await this.sendPasswordResetEmailUseCase.execute(validated)
+                        await this.sendPasswordResetUseCase.execute(validated)
                         await this.outboxRepository.markEventAsProcessed(event.id)
                     }
                 } catch (e) {

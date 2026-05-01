@@ -14,7 +14,6 @@ import { PhoneNumber } from '../domain/phone-number'
 import { sql } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { IPasswordHasher } from '../../auth/domain/password-hasher'
-import { LoggerStore } from '../../config/infrastructure/loggers'
 import { Logger } from '../../common/infrastructure/logger'
 import * as winston from 'winston'
 
@@ -28,11 +27,13 @@ describe('UserRepository (Integration)', () => {
 
     beforeAll(async () => {
         const dummyLogger = new Logger([new winston.transports.Console({ silent: true })])
-        LoggerStore.app = dummyLogger
-        LoggerStore.worker = dummyLogger
         const module: TestingModule = await Test.createTestingModule({
             imports: [ConfigModule, DrizzleModule, ValkeyModule],
-            providers: [UserRepository],
+            providers: [
+                UserRepository,
+                { provide: 'APP_LOGGER', useValue: dummyLogger },
+                { provide: 'WORKER_LOGGER', useValue: dummyLogger },
+            ],
         }).compile()
         repository = module.get<UserRepository>(UserRepository)
         db = module.get<NodePgDatabase>('DRIZZLE_CLIENT')

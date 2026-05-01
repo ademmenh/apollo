@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common'
-import { randomBytes } from 'crypto'
+import { randomBytes, randomUUID } from 'crypto'
 import type { IPasswordHasher } from '../domain/password-hasher'
 import type { IUserRepository } from 'src/users/domain/repository'
 import { User } from 'src/users/domain/entity'
@@ -7,8 +7,7 @@ import { Email } from 'src/users/domain/email'
 import { Password } from 'src/users/domain/password'
 import { UserId } from 'src/users/domain/userId'
 import { PhoneNumber } from 'src/users/domain/phone-number'
-import { UserAlreadyExistsError, MissingPhoneNumberError, PhoneAlreadyExistsError, MissingEmailError } from '../../users/domain/errors'
-
+import { UserAlreadyExistsError, MissingEmailError } from '../../users/domain/errors'
 
 export interface RegisterUserCommand {
     id: string
@@ -29,25 +28,29 @@ export class RegisterUserUseCase {
     async execute(command: RegisterUserCommand): Promise<User> {
         if (!command.email) throw new MissingEmailError()
         const email = Email.create(command.email)
-        const existingUser = await this.userRepository.findByEmail(email.getValue())
-        if (existingUser) throw new UserAlreadyExistsError(email.getValue())
+        const [existingUser, existingNotVerified] = await Promise.all([
+            this.userRepository.findByEmail(email.getValue()),
+            this.userRepository.getNotVerifiedUserByEmail(email.getValue())
+        ])
+        if (existingUser || existingNotVerified) throw new UserAlreadyExistsError(email.getValue())
         const password = await Password.create(command.password, this.passwordHasher)
-        if (!command.phoneNumber) throw new MissingPhoneNumberError()
-        const phoneNumber = PhoneNumber.create(command.phoneNumber)
-        const existingVerifiedUserWithPhone = await this.userRepository.findByPhone(phoneNumber.getValue())
-        if (existingVerifiedUserWithPhone) throw new PhoneAlreadyExistsError(phoneNumber.getValue())
-        const existingNotVerifiedUserWithPhone = await this.userRepository.getNotVerifiedUserByPhone(phoneNumber.getValue())
-        if (existingNotVerifiedUserWithPhone) throw new PhoneAlreadyExistsError(phoneNumber.getValue())
         const userId = UserId.create(command.id)
+        const phoneNumber = command.phoneNumber ? PhoneNumber.create(command.phoneNumber) : null
         const user = User.create(userId, email, password, 'Client', phoneNumber, command.fullName, new Date(command.birthDate))
         const code = randomBytes(3).toString('hex').toUpperCase()
         const codeHash = await this.passwordHasher.hash(code)
         const eventPayload = {
             type: 'VERIFICATION_EMAIL_REQUESTED',
             payload: {
+                id: randomUUID(),
                 to: email.getValue(),
                 fullName: user.getFullName(),
-                code: code
+                code: code,
+                metadata: {
+                    aggregateId: user.getId().getValue(),
+                    aggregateType: 'User',
+                    timestamp: new Date().toISOString()
+                }
             }
         }
         await this.userRepository.saveNotVerified(user, codeHash, 3, eventPayload)

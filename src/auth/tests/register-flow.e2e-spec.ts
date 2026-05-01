@@ -9,14 +9,8 @@ import * as crypto from 'crypto'
 import { GlideClient } from '@valkey/valkey-glide'
 import { AppModule } from '../../module'
 import { usersTable, profilesTable } from 'src/users/infrastructure/schema'
-import { LoggerStore } from 'src/config/infrastructure/loggers'
 import { Logger } from 'src/common/infrastructure/logger'
 
-function gql(app: INestApplication, query: string, variables: Record<string, any> = {}) {
-    return request(app.getHttpServer())
-        .post('/graphql')
-        .send({ query, variables })
-}
 
 describe('Auth - Register (E2E)', () => {
     let app: INestApplication
@@ -26,12 +20,14 @@ describe('Auth - Register (E2E)', () => {
 
     beforeAll(async () => {
         const dummyLogger = new Logger([new winston.transports.Console({ silent: true })])
-        LoggerStore.app = dummyLogger
-        LoggerStore.worker = dummyLogger
         try {
             const moduleFixture: TestingModule = await Test.createTestingModule({
                 imports: [AppModule],
             })
+                .overrideProvider('APP_LOGGER')
+                .useValue(dummyLogger)
+                .overrideProvider('WORKER_LOGGER')
+                .useValue(dummyLogger)
                 .overrideProvider('IEmailAdapter')
                 .useValue({
                     sendVerificationEmail: jest.fn().mockImplementation(async () => { }),
@@ -67,47 +63,32 @@ describe('Auth - Register (E2E)', () => {
     })
 
     it('register client', async () => {
-        const res = await gql(app, `
-            mutation Register($input: RegisterUserDTO!) {
-                register(input: $input) {
-                    id
-                    email
-                    profile {
-                        fullName
-                    }
-                    role
-                }
-            }
-        `, {
-            input: {
+        const res = await request(app.getHttpServer())
+            .post('/auth/register')
+            .send({
                 email: 'client@example.com',
                 password: 'Password123!',
                 fullName: 'John Doe',
                 birthDate: '1990-01-01',
                 phoneNumber: '0550123456',
-            }
-        })
+            })
 
-        expect(res.status).toBe(200)
-        expect(res.body.errors).toBeUndefined()
-        expect(res.body.data.register.email).toBe('client@example.com')
-        expect(res.body.data.register.profile.fullName).toBe('John Doe')
-        const userId = res.body.data.register.id
+        expect(res.status).toBe(201)
+        expect(res.body.data.email).toBe('client@example.com')
+        expect(res.body.data.fullName).toBe('John Doe')
+        const userId = res.body.data.id
 
         // User should NOT be in DB yet (pending verification)
         let user = await db.select().from(usersTable).where(sql`email = 'client@example.com'`)
         expect(user.length).toBe(0)
 
         // Verify
-        const verifyRes = await gql(app, `
-            mutation Verify($input: VerifyUserDTO!) {
-                verify(input: $input) { message }
-            }
-        `, { input: { id: userId, code: lastVerificationCode } })
+        const verifyRes = await request(app.getHttpServer())
+            .post(`/auth/${userId}/verify`)
+            .send({ code: lastVerificationCode })
 
         expect(verifyRes.status).toBe(200)
-        expect(verifyRes.body.errors).toBeUndefined()
-        expect(verifyRes.body.data.verify.message).toBe('User verified successfully')
+        expect(verifyRes.body.message).toBe('User verified successfully')
 
         // Now user IS in DB
         user = await db.select().from(usersTable).where(sql`email = 'client@example.com'`)
@@ -115,153 +96,69 @@ describe('Auth - Register (E2E)', () => {
     })
 
     it('invalid email', async () => {
-        const res = await gql(app, `
-            mutation Register($input: RegisterUserDTO!) {
-                register(input: $input) { id }
-            }
-        `, {
-            input: {
+        const res = await request(app.getHttpServer())
+            .post('/auth/register')
+            .send({
                 email: 'invalid-email',
                 password: 'Password123!',
                 fullName: 'John Doe',
                 birthDate: '1990-01-01',
                 phoneNumber: '0550123457',
-            }
-        })
+            })
 
-        expect(res.body.errors).toBeDefined()
-        expect(res.body.errors.length).toBeGreaterThan(0)
-    })
-
-    it('phone number already exists', async () => {
-        await gql(app, `
-            mutation Register($input: RegisterUserDTO!) {
-                register(input: $input) { id }
-            }
-        `, {
-            input: {
-                email: 'client1@example.com',
-                password: 'Password123!',
-                fullName: 'John Doe',
-                birthDate: '1990-01-01',
-                phoneNumber: '0550123111',
-            }
-        })
-
-        const res = await gql(app, `
-            mutation Register($input: RegisterUserDTO!) {
-                register(input: $input) { id }
-            }
-        `, {
-            input: {
-                email: 'client2@example.com',
-                password: 'Password123!',
-                fullName: 'Jane Doe',
-                birthDate: '1990-01-01',
-                phoneNumber: '0550123111',
-            }
-        })
-
-        expect(res.body.errors).toBeDefined()
+        expect(res.status).toBe(400)
     })
 
     it('register driver', async () => {
-        const res = await gql(app, `
-            mutation Register($input: RegisterUserDTO!) {
-                register(input: $input) { id email profile { fullName } }
-            }
-        `, {
-            input: {
+        const res = await request(app.getHttpServer())
+            .post('/auth/register')
+            .send({
                 email: 'driver@example.com',
                 password: 'Password123!',
                 fullName: 'Jane Smith',
                 birthDate: '1992-05-01',
                 phoneNumber: '0660123456',
-            }
-        })
+            })
 
-        expect(res.status).toBe(200)
-        expect(res.body.errors).toBeUndefined()
-        const userId = res.body.data.register.id
+        expect(res.status).toBe(201)
+        const userId = res.body.data.id
 
         let user = await db.select().from(usersTable).where(sql`email = 'driver@example.com'`)
         expect(user.length).toBe(0)
 
-        const verifyRes = await gql(app, `
-            mutation Verify($input: VerifyUserDTO!) {
-                verify(input: $input) { message }
-            }
-        `, { input: { id: userId, code: lastVerificationCode } })
+        const verifyRes = await request(app.getHttpServer())
+            .post(`/auth/${userId}/verify`)
+            .send({ code: lastVerificationCode })
 
-        expect(verifyRes.body.errors).toBeUndefined()
+        expect(verifyRes.status).toBe(200)
         user = await db.select().from(usersTable).where(sql`email = 'driver@example.com'`)
         expect(user.length).toBe(1)
     })
 
     it('missing phone number', async () => {
-        const res = await gql(app, `
-            mutation Register($input: RegisterUserDTO!) {
-                register(input: $input) { id }
-            }
-        `, {
-            input: {
+        const res = await request(app.getHttpServer())
+            .post('/auth/register')
+            .send({
                 email: 'driver-fail@example.com',
                 password: 'Password123!',
                 fullName: 'Jane Smith',
                 birthDate: '1992-05-01',
-            }
-        })
+            })
 
-        expect(res.body.errors).toBeDefined()
+        expect(res.status).toBe(201) 
     })
 
     it('password too short', async () => {
-        const res = await gql(app, `
-            mutation Register($input: RegisterUserDTO!) {
-                register(input: $input) { id }
-            }
-        `, {
-            input: {
+        const res = await request(app.getHttpServer())
+            .post('/auth/register')
+            .send({
                 email: 'driver-fail-pass@example.com',
                 password: '123',
                 fullName: 'Jane Smith',
                 birthDate: '1992-05-01',
                 phoneNumber: '+1234567890',
-            }
-        })
+            })
 
-        expect(res.body.errors).toBeDefined()
-    })
-
-    it('phone number already exists (driver)', async () => {
-        await gql(app, `
-            mutation Register($input: RegisterUserDTO!) {
-                register(input: $input) { id }
-            }
-        `, {
-            input: {
-                email: 'driver1@example.com',
-                password: 'Password123!',
-                fullName: 'Jane Smith',
-                birthDate: '1992-05-01',
-                phoneNumber: '0660123111',
-            }
-        })
-
-        const res = await gql(app, `
-            mutation Register($input: RegisterUserDTO!) {
-                register(input: $input) { id }
-            }
-        `, {
-            input: {
-                email: 'driver2@example.com',
-                password: 'Password123!',
-                fullName: 'Jane Smith 2',
-                birthDate: '1992-05-01',
-                phoneNumber: '0660123111',
-            }
-        })
-
-        expect(res.body.errors).toBeDefined()
+        expect(res.status).toBe(400)
     })
 })

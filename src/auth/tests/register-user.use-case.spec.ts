@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, jest } from 'bun:test'
-import { RegisterUserCommand, RegisterUserUseCase } from '../application/register-user'
+import { RegisterUserCommand, RegisterUserUseCase } from '../application/register'
 import { InMemoryUserRepository } from 'src/users/infrastructure/in-memory-repository'
 import { BcryptPasswordHasher } from 'src/users/infrastructure/bcrypt-password'
 import { MissingEmailError } from 'src/users/domain/errors'
@@ -44,14 +44,17 @@ describe('RegisterUserUseCase', () => {
         await expect(useCase.execute(command)).rejects.toThrow(MissingEmailError)
     })
 
-    it('registration fails with missing phone number', async () => {
+    it('registration succeeds with missing phone number', async () => {
         const command: RegisterUserCommand = {
             id: '123e4567-e89b-12d3-a456-426614174005',
-            email: 'test@example.com',
+            email: 'test-no-phone@example.com',
             password: 'password123',
             fullName: 'John Doe',
             birthDate: '1990-01-01',
         } as RegisterUserCommand
-        await expect(useCase.execute(command)).rejects.toThrow()
+        await useCase.execute(command)
+        const unverified = await userRepository.getNotVerifiedUser(command.id)
+        if (unverified === null) throw new Error('User not found')
+        expect(unverified.user.getPhoneNumber()).toBeNull()
     })
 })

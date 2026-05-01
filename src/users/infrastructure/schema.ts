@@ -14,7 +14,7 @@ export const profilesTable = pgTable('profiles', {
     id: uuid('id').primaryKey().references(() => usersTable.id),
     fullName: text('full_name').notNull(),
     birthDate: timestamp('birth_date').notNull(),
-    phoneNumber: text('phone_number').unique().notNull(),
+    phoneNumber: text('phone_number'),
 })
 
 export const outboxEventsTable = pgTable('outbox_events', {

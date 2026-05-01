@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
 import { PassportModule } from '@nestjs/passport'
-import { AuthResolver } from './presentation/resolver'
-import { RegisterUserUseCase } from './application/register-user'
+import { AuthController } from './presentation/auth.controller'
+import { RegisterUserUseCase } from './application/register'
 import { LoginUseCase } from './application/login'
 import { RefreshLoginUseCase } from './application/refresh-login'
 import { VerifyUserUseCase } from './application/verify-user'
@@ -19,7 +19,7 @@ import { JwtRefreshGuard, JwtRefreshStrategy } from './presentation/refresh-toke
 import { MailModule } from '../config/infrastructure/mail-module'
 import { EmailOutboxWorker } from './infrastructure/worker'
 import { SendVerificationEmailUseCase } from './application/send-verification-email'
-import { SendPasswordResetEmailUseCase } from './application/send-password-reset-email'
+import { SendPasswordResetUseCase } from './application/send-password-reset'
 
 @Module({
     imports: [
@@ -38,8 +38,8 @@ import { SendPasswordResetEmailUseCase } from './application/send-password-reset
             inject: [ConfigService],
         }),
     ],
+    controllers: [AuthController],
     providers: [
-        AuthResolver,
         {
             provide: 'ITokenProvider',
             useClass: TokenAdapter,
@@ -56,7 +56,7 @@ import { SendPasswordResetEmailUseCase } from './application/send-password-reset
         JwtAccessGuard,
         JwtRefreshGuard,
         SendVerificationEmailUseCase,
-        SendPasswordResetEmailUseCase,
+        SendPasswordResetUseCase,
         EmailOutboxWorker,
         {
             provide: 'IEmailAdapter',

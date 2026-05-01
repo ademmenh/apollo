@@ -1,7 +1,6 @@
 import { Module, Global } from '@nestjs/common'
 import { ConfigModule as NestConfigModule } from '@nestjs/config'
 import * as Joi from 'joi'
-import { LoggerStore } from './infrastructure/loggers'
 
 @Global()
 @Module({
@@ -21,7 +20,7 @@ import { LoggerStore } from './infrastructure/loggers'
                 DB_NAME: Joi.string().required(),
 
                 LOGS_DIRNAME: Joi.string().default('logs'),
-                RENTENTION_DAYS: Joi.number().default(30),
+                RETENTION_DAYS: Joi.number().default(30),
 
                 JWT_ACCESS_TOKEN_SECRET: Joi.string().required(),
                 JWT_REFRESH_TOKEN_SECRET: Joi.string().required(),
@@ -49,16 +48,7 @@ import { LoggerStore } from './infrastructure/loggers'
             }),
         }),
     ],
-    providers: [
-        {
-            provide: 'WORKER_LOGGER',
-            useFactory: () => LoggerStore.getWorker(),
-        },
-        {
-            provide: 'APP_LOGGER',
-            useFactory: () => LoggerStore.getApp(),
-        }
-    ],
-    exports: ['WORKER_LOGGER'],
+    providers: [],
+    exports: [],
 })
 export class ConfigModule { }

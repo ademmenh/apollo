@@ -16,14 +16,7 @@ import { PhoneNumber } from 'src/users/domain/phone-number'
 import { usersTable, profilesTable } from 'src/users/infrastructure/schema'
 import { GlideClient } from '@valkey/valkey-glide'
 import { IUserRepository } from 'src/users/domain/repository'
-import { LoggerStore } from 'src/config/infrastructure/loggers'
 import { Logger } from 'src/common/infrastructure/logger'
-
-function gql(app: INestApplication, query: string, variables: Record<string, any> = {}) {
-    return request(app.getHttpServer())
-        .post('/graphql')
-        .send({ query, variables })
-}
 
 describe('Auth - Login (E2E)', () => {
     let app: INestApplication
@@ -34,11 +27,13 @@ describe('Auth - Login (E2E)', () => {
 
     beforeAll(async () => {
         const dummyLogger = new Logger([new winston.transports.Console({ silent: true })])
-        LoggerStore.app = dummyLogger
-        LoggerStore.worker = dummyLogger
         const module: TestingModule = await Test.createTestingModule({
             imports: [AppModule],
         })
+            .overrideProvider('APP_LOGGER')
+            .useValue(dummyLogger)
+            .overrideProvider('WORKER_LOGGER')
+            .useValue(dummyLogger)
             .overrideProvider('IEmailAdapter')
             .useValue({ sendVerificationEmail: jest.fn().mockResolvedValue(undefined) })
             .compile()
@@ -51,7 +46,7 @@ describe('Auth - Login (E2E)', () => {
     })
 
     afterAll(async () => {
-        await app.close()
+        if (app) await app.close()
     })
 
     beforeEach(async () => {
@@ -65,44 +60,27 @@ describe('Auth - Login (E2E)', () => {
         const user = User.create(UserId.create(randomUUID()), Email.create('login@example.com'), password, 'Client', PhoneNumber.create('0550123456'), 'John Doe', new Date('1990-01-01'))
         await userRepository.save(user)
 
-        const res = await gql(app, `
-            mutation Login($input: LoginDTO!) {
-                login(input: $input) {
-                    user { id email profile { fullName } }
-                    accessToken
-                    refreshToken
-                }
-            }
-        `, {
-            input: {
+        const res = await request(app.getHttpServer())
+            .post('/auth/login')
+            .send({
                 email: 'login@example.com',
                 password: 'Password123!',
-            }
-        })
+            })
 
         expect(res.status).toBe(200)
-        expect(res.body.errors).toBeUndefined()
-        expect(res.body.data.login.accessToken).toBeDefined()
-        expect(res.body.data.login.refreshToken).toBeDefined()
-        expect(res.body.data.login.user.profile.fullName).toBe('John Doe')
+        expect(res.body.tokens.accessToken).toBeDefined()
+        expect(res.body.tokens.refreshToken).toBeDefined()
+        expect(res.body.data.fullName).toBe('John Doe')
     })
 
     it('invalid credentials', async () => {
-        const res = await gql(app, `
-            mutation Login($input: LoginDTO!) {
-                login(input: $input) {
-                    user { id }
-                    accessToken
-                }
-            }
-        `, {
-            input: {
+        const res = await request(app.getHttpServer())
+            .post('/auth/login')
+            .send({
                 email: 'nonexistent@example.com',
                 password: 'Password123!',
-            }
-        })
+            })
 
-        expect(res.body.errors).toBeDefined()
-        expect(res.body.errors.length).toBeGreaterThan(0)
+        expect(res.status).toBe(401)
     })
 })

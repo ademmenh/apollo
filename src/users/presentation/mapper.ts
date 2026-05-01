@@ -7,7 +7,7 @@ export class ProfileMapper {
             id: profile.getId(),
             fullName: profile.getFullName(),
             birthDate: profile.getBirthDate(),
-            phoneNumber: profile.getPhoneNumber().getValue(),
+            phoneNumber: profile.getPhoneNumber()?.getValue() ?? null,
         }
     }
 }

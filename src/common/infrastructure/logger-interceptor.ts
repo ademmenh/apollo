@@ -1,12 +1,12 @@
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common'
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Inject } from '@nestjs/common'
 import { GqlContextType, GqlExecutionContext } from '@nestjs/graphql'
 import { Observable } from 'rxjs'
 import { tap } from 'rxjs/operators'
-import { createLogger } from 'winston'
+import { Logger } from './logger'
 
 @Injectable()
 export class ResponseLoggingInterceptor implements NestInterceptor {
-    constructor(private readonly logger: ReturnType<typeof createLogger>) { }
+    constructor(@Inject('APP_LOGGER') private readonly logger: Logger) { }
 
     private getClientIp(request: any): string {
         if (!request) return 'unknown'

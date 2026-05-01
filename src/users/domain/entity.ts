@@ -37,7 +37,7 @@ export class User {
         this.deletedAt = deletedAt
     }
 
-    static create(id: UserId, email: Email | null, password: Password, role: TUserRole, phoneNumber: PhoneNumber, fullName: string, birthDate: Date): User {
+    static create(id: UserId, email: Email | null, password: Password, role: TUserRole, phoneNumber: PhoneNumber | null, fullName: string, birthDate: Date): User {
         const profile = UserProfile.create(id.getValue(), fullName, birthDate, phoneNumber)
         return new User(id, email, password, role, profile, false, new Date(), null)
     }
@@ -47,22 +47,13 @@ export class User {
         email: Email | null,
         password: Password,
         role: TUserRole,
-        phoneNumber: PhoneNumber,
+        phoneNumber: PhoneNumber | null,
         fullName: string,
         birthDate: Date,
         isBanned: boolean,
         createdAt: Date,
         deletedAt: Date | null,
     ): User {
-        if (!id) throw new Error('id is required')
-        if (!password) throw new Error('password is required')
-        if (!role) throw new Error('role is required')
-        if (!phoneNumber) throw new Error('phoneNumber is required')
-        if (!fullName) throw new Error('fullName is required')
-        if (!birthDate) throw new Error('birthDate is required')
-        if (isBanned === null || isBanned === undefined) throw new Error('isBanned is required')
-        if (!createdAt) throw new Error('createdAt is required')
-
         const profile = UserProfile.reconstruct(id.getValue(), fullName, birthDate, phoneNumber)
         return new User(id, email, password, role, profile, isBanned, createdAt, deletedAt)
     }
@@ -91,7 +82,7 @@ export class User {
         return this.role
     }
 
-    getPhoneNumber(): PhoneNumber {
+    getPhoneNumber(): PhoneNumber | null {
         return this.profile.getPhoneNumber()
     }
 

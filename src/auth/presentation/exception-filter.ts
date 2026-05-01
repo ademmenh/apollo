@@ -4,7 +4,7 @@ import { Response } from 'express'
 import { AuthError, InvalidRefreshTokenError, InvalidTokenError, UserNotFoundError } from '../domain/error'
 import { InvalidEmailError, InvalidPhoneNumberError, InvalidUserIdError, MissingEmailError, MissingPhoneNumberError, CanNotLoginError, PhoneAlreadyExistsError, UserAlreadyExistsError, WeakPasswordError } from '../../users/domain/errors'
 
-@Catch()
+@Catch(AuthError, WeakPasswordError, InvalidEmailError, InvalidPhoneNumberError, InvalidUserIdError, MissingEmailError, MissingPhoneNumberError, CanNotLoginError, PhoneAlreadyExistsError, UserAlreadyExistsError, HttpException, Error)
 export class AuthExceptionFilter implements ExceptionFilter {
     catch(exception: any, host: ArgumentsHost) {
         let status = HttpStatus.INTERNAL_SERVER_ERROR
@@ -42,11 +42,6 @@ export class AuthExceptionFilter implements ExceptionFilter {
         } else {
             console.error('Unhandled Auth Error:', exception)
             message = exception.message || 'Internal server error'
-        }
-
-        // GraphQL: re-throw as HttpException so NestJS GraphQL formats it into errors[]
-        if (host.getType<GqlContextType>() === 'graphql') {
-            throw new HttpException(message, status)
         }
 
         // REST fallback (e.g. health check controller)

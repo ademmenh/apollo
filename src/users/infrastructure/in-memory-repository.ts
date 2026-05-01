@@ -1,5 +1,6 @@
 import type { IUserRepository } from 'src/users/domain/repository'
 import { User } from 'src/users/domain/entity'
+import { UserProfile } from '../domain/user-profile'
 
 export class InMemoryUserRepository implements IUserRepository {
     private users: Map<string, User> = new Map()
@@ -27,11 +28,6 @@ export class InMemoryUserRepository implements IUserRepository {
         return null
     }
 
-    async findByPhone(phone: string): Promise<User | null> {
-        for (const user of this.users.values()) if (user.getPhoneNumber()?.getValue() === phone) return user
-        return null
-    }
-
     async saveNotVerified(user: User, codeHash: string, attempts: number, eventPayload: { type: string; payload: any }): Promise<void> {
         this.notVerifiedUsers.set(user.getId().getValue(), { user, codeHash, attempts })
     }
@@ -43,6 +39,13 @@ export class InMemoryUserRepository implements IUserRepository {
     async getNotVerifiedUserByPhone(phone: string): Promise<{ user: User; codeHash: string; attempts: number } | null> {
         for (const notVerified of this.notVerifiedUsers.values()) {
             if (notVerified.user.getPhoneNumber()?.getValue() === phone) return notVerified
+        }
+        return null
+    }
+
+    async getNotVerifiedUserByEmail(email: string): Promise<{ user: User; codeHash: string; attempts: number } | null> {
+        for (const notVerified of this.notVerifiedUsers.values()) {
+            if (notVerified.user.getEmail()?.getValue() === email) return notVerified
         }
         return null
     }
@@ -61,6 +64,20 @@ export class InMemoryUserRepository implements IUserRepository {
 
     async removeForgotPasswordSecret(userId: string): Promise<void> {
         this.forgotPasswordSecrets.delete(userId)
+    }
+
+    async findProfilesByIds(ids: string[]): Promise<UserProfile[]> {
+        const results: UserProfile[] = []
+        for (const user of this.users.values()) {
+            if (ids.includes(user.getId().getValue())) {
+                results.push(user.getProfile())
+            }
+        }
+        return results
+    }
+
+    async findAll(): Promise<User[]> {
+        return Array.from(this.users.values())
     }
 
     // Helper for tests
