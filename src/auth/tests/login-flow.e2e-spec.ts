@@ -50,8 +50,7 @@ describe('Auth - Login (E2E)', () => {
     })
 
     beforeEach(async () => {
-        await db.execute(sql`DELETE FROM ${profilesTable}`)
-        await db.execute(sql`DELETE FROM ${usersTable}`)
+        await db.execute(sql`TRUNCATE TABLE ${profilesTable}, ${usersTable} RESTART IDENTITY CASCADE`)
         await valkey.customCommand(['FLUSHALL'])
     })
 

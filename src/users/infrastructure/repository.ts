@@ -198,6 +198,16 @@ export class UserRepository implements IUserRepository {
         return results.map(r => UserMapper.toProfileDomain(r))
     }
 
+    async findByIds(ids: string[]): Promise<User[]> {
+        if (ids.length === 0) return []
+        const results = await this.db.select()
+            .from(usersTable)
+            .innerJoin(profilesTable, eq(usersTable.id, profilesTable.id))
+            .where(inArray(usersTable.id, ids))
+
+        return results.map(r => UserMapper.toDomain(r.users, r.profiles))
+    }
+
     async findAll(limit: number, offset: number): Promise<User[]> {
         const results = await this.db.select()
             .from(usersTable)

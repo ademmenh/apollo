@@ -6,6 +6,7 @@ import { ValkeyModule } from '../../config/infrastructure/valkey-module'
 import { ConfigModule } from '../../config/module'
 import { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { usersTable, profilesTable, followsTable } from '../infrastructure/schema'
+import { postsTable } from '../../posts/infrastructure/schema'
 import { User } from '../domain/entity'
 import { UserId } from '../domain/userId'
 import { Email } from '../domain/email'
@@ -41,9 +42,7 @@ describe('UserRepository (Integration)', () => {
     })
 
     afterEach(async () => {
-        await db.execute(sql`DELETE FROM ${followsTable}`)
-        await db.execute(sql`DELETE FROM ${profilesTable}`)
-        await db.execute(sql`DELETE FROM ${usersTable}`)
+        await db.execute(sql`TRUNCATE TABLE ${postsTable}, ${followsTable}, ${profilesTable}, ${usersTable} RESTART IDENTITY CASCADE`)
     })
 
     it('save and find by ID', async () => {

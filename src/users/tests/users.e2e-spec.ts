@@ -52,9 +52,7 @@ describe('Users - Resolver (E2E)', () => {
     })
 
     beforeEach(async () => {
-        await db.execute(sql`DELETE FROM ${followsTable}`)
-        await db.execute(sql`DELETE FROM ${profilesTable}`)
-        await db.execute(sql`DELETE FROM ${usersTable}`)
+        await db.execute(sql`TRUNCATE TABLE ${followsTable}, ${profilesTable}, ${usersTable} RESTART IDENTITY CASCADE`)
         await valkey.customCommand(['FLUSHALL'])
     })
 
@@ -171,6 +169,51 @@ describe('Users - Resolver (E2E)', () => {
         expect(res.body.data.user.profile.fullName).toBe('Single User')
     })
 
+    it('should query a user and their posts', async () => {
+        const password = await Password.create('Password123!', passwordHasher)
+        const user = User.create(UserId.create(randomUUID()), Email.create('author-posts@example.com'), password, 'Client', null, 'Author Name', new Date())
+        await userRepository.save(user)
+
+        const loginRes = await request(app.getHttpServer())
+            .post('/auth/login')
+            .send({ email: 'author-posts@example.com', password: 'Password123!' })
+        const token = loginRes.body.tokens.accessToken
+
+        // Create a post for this user
+        const createMutation = {
+            query: `mutation CreatePost($content: String!) { createPost(content: $content) { id } }`,
+            variables: { content: 'Nested post test' }
+        }
+        await request(app.getHttpServer())
+            .post(graphqlPath)
+            .set('Authorization', `Bearer ${token}`)
+            .send(createMutation)
+
+        // Query user with posts
+        const userWithPostsQuery = {
+            query: `
+                query GetUserWithPosts($id: ID!) {
+                    user(id: $id) {
+                        email
+                        posts(limit: 10, skip: 0) {
+                            content
+                        }
+                    }
+                }
+            `,
+            variables: { id: user.getId().getValue() }
+        }
+
+        const res = await request(app.getHttpServer())
+            .post(graphqlPath)
+            .set('Authorization', `Bearer ${token}`)
+            .send(userWithPostsQuery)
+
+        expect(res.status).toBe(200)
+        expect(res.body.data.user.posts.length).toBe(1)
+        expect(res.body.data.user.posts[0].content).toBe('Nested post test')
+    })
+
     it('should list users with pagination', async () => {
         const password = await Password.create('Password123!', passwordHasher)
         const user1 = User.create(UserId.create(randomUUID()), Email.create('list1@example.com'), password, 'Client', null, 'User 1', new Date())
@@ -244,8 +287,57 @@ describe('Users - Resolver (E2E)', () => {
             .set('Authorization', `Bearer ${token}`)
             .send(nestedQuery)
 
+
         expect(res.status).toBe(200)
         expect(res.body.data.user1.followingList[0].fullName).toBe('Flow Two')
         expect(res.body.data.user2.followersList[0].fullName).toBe('Flow One')
+    })
+
+    it('should query a user and their posts with pagination', async () => {
+        const password = await Password.create('Password123!', passwordHasher)
+        const user = User.create(UserId.create(randomUUID()), Email.create('pagination@example.com'), password, 'Client', null, 'Author', new Date())
+        await userRepository.save(user)
+
+        const loginRes = await request(app.getHttpServer())
+            .post('/auth/login')
+            .send({ email: 'pagination@example.com', password: 'Password123!' })
+        const token = loginRes.body.tokens.accessToken
+
+        // Create 3 posts (wait a bit between them to ensure unique createdAt)
+        for (let i = 1; i <= 3; i++) {
+            await request(app.getHttpServer())
+                .post(graphqlPath)
+                .set('Authorization', `Bearer ${token}`)
+                .send({
+                    query: `mutation Create($content: String!) { createPost(content: $content) { id } }`,
+                    variables: { content: `Post ${i}` }
+                })
+        }
+
+        // Query with limit 2, skip 1 (should get Post 2 and Post 1 if descending)
+        const query = {
+            query: `
+                query GetUserPosts($id: ID!) {
+                    user(id: $id) {
+                        posts(limit: 2, skip: 1) {
+                            id, content, createdAt
+                        }
+                    }
+                }
+            `,
+            variables: { id: user.getId().getValue() }
+        }
+
+        const res = await request(app.getHttpServer())
+            .post(graphqlPath)
+            .set('Authorization', `Bearer ${token}`)
+            .send(query)
+
+        // console.log(res.body.data.user.posts)
+        expect(res.status).toBe(200)
+        const posts = res.body.data.user.posts
+        expect(posts.length).toBe(2)
+        expect(posts[0].content).toBe('Post 2')
+        expect(posts[1].content).toBe('Post 1')
     })
 })

@@ -10,6 +10,7 @@ import { ValkeyModule } from './config/infrastructure/valkey-module'
 import { MailModule } from './config/infrastructure/mail-module'
 import { AuthModule } from './auth/module'
 import { UsersModule } from './users/module'
+import { PostsModule } from './posts/module'
 import { OutboxModule } from './outbox/outbox.module'
 import { ScheduleModule } from '@nestjs/schedule'
 import { AppController } from './controller'
@@ -28,6 +29,7 @@ import { UUIDGenerator } from './common/infrastructure/uuid-generator'
         MailModule,
         AuthModule,
         UsersModule,
+        PostsModule,
         OutboxModule,
         ScheduleModule.forRoot(),
         GraphQLModule.forRootAsync<ApolloDriverConfig>({

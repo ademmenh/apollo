@@ -1,7 +1,7 @@
 import { Args, ID, Int, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql'
-import { UseGuards } from '@nestjs/common'
+import { UseGuards, Inject, forwardRef } from '@nestjs/common'
 import { UserRDTO, ProfileRDTO, SuccessResponse } from '../../auth/presentation/auth.types'
-import { ProfileDataLoader } from '../infrastructure/profile.dataloader'
+import { ProfileDataLoader } from './profile.dataloader'
 import { ProfileNotFoundError } from '../domain/errors'
 import { GetUsersUseCase } from '../application/get-users'
 import { GetUserUseCase } from '../application/get-user'
@@ -12,6 +12,8 @@ import { JwtAccessGuard } from '../../auth/presentation/access-token'
 import { GqlUser } from '../../common/presentation/gql-user.decorator'
 import { type TokenPayload } from '../../auth/domain/token-provider'
 import { UserMapper, ProfileMapper } from './mapper'
+import { PostRDTO } from '../../posts/presentation/post.types'
+import { PostsDataLoader } from '../../posts/presentation/posts.dataloader'
 
 @Resolver(() => UserRDTO)
 @UseGuards(JwtAccessGuard)
@@ -23,6 +25,8 @@ export class UsersResolver {
         private readonly followUserUseCase: FollowUserUseCase,
         private readonly getFollowersUseCase: GetFollowersUseCase,
         private readonly getFollowingUseCase: GetFollowingUseCase,
+        @Inject(forwardRef(() => PostsDataLoader))
+        private readonly postsDataLoader: PostsDataLoader,
     ) { }
 
     @Query(() => [UserRDTO], { name: 'users', description: 'Retrieve a list of all registered users' })
@@ -96,5 +100,14 @@ export class UsersResolver {
         const profile = await this.profileDataLoader.loader.load(user.id)
         if (!profile) throw new ProfileNotFoundError(user.id)
         return profile
+    }
+
+    @ResolveField(() => [PostRDTO], { name: 'posts', description: "The list of posts created by this user" })
+    async posts(
+        @Parent() user: UserRDTO,
+        @Args('limit', { type: () => Int }) limit: number,
+        @Args('skip', { type: () => Int }) skip: number,
+    ): Promise<PostRDTO[]> {
+        return this.postsDataLoader.loader.load({ userId: user.id, limit, skip })
     }
 }

@@ -79,6 +79,15 @@ export class InMemoryUserRepository implements IUserRepository {
         return results
     }
 
+    async findByIds(ids: string[]): Promise<User[]> {
+        const results: User[] = []
+        for (const id of ids) {
+            const user = this.users.get(id)
+            if (user) results.push(user)
+        }
+        return results
+    }
+
     async findAll(limit: number, offset: number): Promise<User[]> {
         let results = Array.from(this.users.values())
         results = results.slice(offset)

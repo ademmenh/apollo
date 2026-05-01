@@ -44,6 +44,9 @@ type UserRDTO {
 
   """The list of users this user is following"""
   followingList(limit: Int!, skip: Int!): [ProfileRDTO!]!
+
+  """The list of posts created by this user"""
+  posts(limit: Int!, skip: Int!): [PostRDTO!]!
 }
 
 enum UserRole {
@@ -53,6 +56,17 @@ enum UserRole {
 
 type SuccessResponse {
   message: String!
+}
+
+"""A social post created by a user"""
+type PostRDTO {
+  id: ID!
+  content: String!
+  createdAt: DateTime!
+  authorId: ID!
+
+  """The author profile of the post"""
+  author: ProfileRDTO!
 }
 
 type Query {
@@ -69,9 +83,12 @@ type Query {
 
   """Get users a user is following"""
   following(userId: ID!, limit: Int!, skip: Int!): [ProfileRDTO!]!
+  posts(limit: Int!, skip: Int!): [PostRDTO!]!
+  postsByUser(userId: ID!, limit: Int!, skip: Int!): [PostRDTO!]!
 }
 
 type Mutation {
   """Follow another user"""
   followUser(followingId: ID!): SuccessResponse!
+  createPost(content: String!): PostRDTO!
 }
