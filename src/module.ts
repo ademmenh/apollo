@@ -10,13 +10,14 @@ import { ValkeyModule } from './config/infrastructure/valkey-module'
 import { MailModule } from './config/infrastructure/mail-module'
 import { AuthModule } from './auth/module'
 import { UsersModule } from './users/module'
+import { OutboxModule } from './outbox/outbox.module'
 import { ScheduleModule } from '@nestjs/schedule'
 import { AppController } from './app.controller'
 import { AppResolver } from './app.resolver'
 import { createLoggerProvider } from './common/infrastructure/logger'
 import { ResponseLoggingInterceptor } from './common/infrastructure/logger-interceptor'
 import { DrizzleExceptionFilter } from './common/presentation/drizzle-exception-filter'
-import { AuthExceptionFilter } from './auth/presentation/exception-filter'
+import { UUIDGenerator } from './common/infrastructure/uuid-generator'
 
 @Global()
 @Module({
@@ -27,6 +28,7 @@ import { AuthExceptionFilter } from './auth/presentation/exception-filter'
         MailModule,
         AuthModule,
         UsersModule,
+        OutboxModule,
         ScheduleModule.forRoot(),
         GraphQLModule.forRootAsync<ApolloDriverConfig>({
             driver: ApolloDriver,
@@ -48,6 +50,10 @@ import { AuthExceptionFilter } from './auth/presentation/exception-filter'
         createLoggerProvider('APP_LOGGER', 'app'),
         createLoggerProvider('WORKER_LOGGER', 'worker'),
         {
+            provide: 'IDGenerator',
+            useClass: UUIDGenerator,
+        },
+        {
             provide: APP_INTERCEPTOR,
             useClass: ResponseLoggingInterceptor,
         },
@@ -64,6 +70,6 @@ import { AuthExceptionFilter } from './auth/presentation/exception-filter'
             useValue: new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
         },
     ],
-    exports: ['APP_LOGGER', 'WORKER_LOGGER'],
+    exports: ['APP_LOGGER', 'WORKER_LOGGER', 'IDGenerator'],
 })
 export class AppModule { }

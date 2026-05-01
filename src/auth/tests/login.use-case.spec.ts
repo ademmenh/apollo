@@ -10,6 +10,8 @@ import { UserId } from 'src/users/domain/userId'
 import { Email } from 'src/users/domain/email'
 import { Password } from 'src/users/domain/password'
 import { PhoneNumber } from 'src/users/domain/phone-number'
+import { InvalidCredentialsError } from '../domain/error'
+import { CanNotLoginError } from 'src/users/domain/errors'
 
 describe('LoginUseCase', () => {
     let useCase: LoginUseCase
@@ -85,7 +87,7 @@ describe('LoginUseCase', () => {
 
         expect(
             useCase.execute({ email: 'nonexistent@example.com', password: 'password123' })
-        ).rejects.toThrow('Invalid credentials')
+        ).rejects.toThrow(InvalidCredentialsError)
     })
 
     it('logIn - password does not match', async () => {
@@ -95,7 +97,7 @@ describe('LoginUseCase', () => {
 
         expect(
             useCase.execute({ email: 'test@example.com', password: 'wrongpassword' })
-        ).rejects.toThrow('Invalid credentials')
+        ).rejects.toThrow(InvalidCredentialsError)
     })
 
     it('logIn - user is banned', async () => {
@@ -105,6 +107,6 @@ describe('LoginUseCase', () => {
 
         expect(
             useCase.execute({ email: 'banned@example.com', password: 'password123' })
-        ).rejects.toThrow('User user-123 can not login.') // from CanNotLoginError
+        ).rejects.toThrow(CanNotLoginError)
     })
 })

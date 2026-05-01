@@ -7,16 +7,22 @@ import { UserId } from 'src/users/domain/userId'
 import { Email } from 'src/users/domain/email'
 import { PhoneNumber } from 'src/users/domain/phone-number'
 import { Password } from 'src/users/domain/password'
+import { IDGenerator } from 'src/common/domain/id-generator'
+import { UserNotFoundError } from '../domain/error'
 
 describe('RequestForgotPasswordUseCase', () => {
     let useCase: RequestForgotPasswordUseCase
     let userRepository: InMemoryUserRepository
     let passwordHasher: BcryptPasswordHasher
+    let idGenerator: IDGenerator
 
     beforeEach(() => {
         userRepository = new InMemoryUserRepository()
         passwordHasher = new BcryptPasswordHasher()
-        useCase = new RequestForgotPasswordUseCase(userRepository, passwordHasher)
+        idGenerator = {
+            newId: jest.fn().mockReturnValue('event-id')
+        }
+        useCase = new RequestForgotPasswordUseCase(userRepository, passwordHasher, idGenerator)
     })
 
     it('request forgot password successfully', async () => {
@@ -33,12 +39,13 @@ describe('RequestForgotPasswordUseCase', () => {
 
         expect(spy).toHaveBeenCalled()
         const args = spy.mock.calls[0]
-        expect(args[4]).toBeDefined()
-        expect(args[4]!.type).toBe('PASSWORD_RESET_EMAIL_REQUESTED')
-        expect(args[4]!.payload.to).toBe('test@example.com')
+        const event = args[4]
+        expect(event).toBeDefined()
+        expect(event.type).toBe('PASSWORD_RESET_EMAIL_REQUESTED')
+        expect(event.payload.fullName).toBe('John Doe')
     })
 
     it('user not found', async () => {
-        await expect(useCase.execute('nonexistent@example.com')).rejects.toThrow('User not found')
+        await expect(useCase.execute('nonexistent@example.com')).rejects.toThrow(UserNotFoundError)
     })
 })

@@ -16,14 +16,3 @@ export const profilesTable = pgTable('profiles', {
     birthDate: timestamp('birth_date').notNull(),
     phoneNumber: text('phone_number'),
 })
-
-export const outboxEventsTable = pgTable('outbox_events', {
-    id: uuid('id').primaryKey(),
-    aggregateType: text('aggregate_type').notNull(),
-    aggregateId: text('aggregate_id').notNull(),
-    type: text('type').notNull(),
-    payload: text('payload').notNull(),
-    status: text('status').notNull().default('PENDING'),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-    processedAt: timestamp('processed_at'),
-})

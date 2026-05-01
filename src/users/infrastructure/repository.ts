@@ -6,8 +6,9 @@ import { IUserRepository } from '../domain/repository'
 import { User } from '../domain/entity'
 import { UserProfile } from '../domain/user-profile'
 import { UserMapper } from './mapper'
-import { usersTable, outboxEventsTable, profilesTable } from './schema'
-import { randomUUID } from 'crypto'
+import { usersTable, profilesTable } from './schema'
+import { eventsForOne } from '../../outbox/infrastructure/persistence/schema'
+import { OutboxEvent } from '../../outbox/domain/outbox-event.entity'
 
 @Injectable()
 export class UserRepository implements IUserRepository {
@@ -64,7 +65,19 @@ export class UserRepository implements IUserRepository {
         return UserMapper.toDomain(result[0].users, result[0].profiles)
     }
 
-    async saveNotVerified(user: User, codeHash: string, attempts: number, eventPayload: { type: string; payload: any }): Promise<void> {
+    async saveNotVerified(user: User, codeHash: string, attempts: number, event: OutboxEvent): Promise<void> {
+        await this.setNotVerified(user, codeHash, attempts)
+
+        await this.db.insert(eventsForOne).values({
+            id: event.id,
+            type: event.type,
+            payload: event.payload,
+            receiverId: event.receiverId,
+            status: event.status,
+        })
+    }
+
+    async setNotVerified(user: User, codeHash: string, attempts: number): Promise<void> {
         const key = `user:not-verified:${user.getId().getValue()}`
         const phoneNumber = user.getPhoneNumber()
         const email = user.getEmail()
@@ -89,21 +102,10 @@ export class UserRepository implements IUserRepository {
             batch.expire(emailKey, this.ttl)
         }
         batch.expire(key, this.ttl)
-        batch.customCommand([
-            'LPUSH',
-            'outbox:events',
-            JSON.stringify({
-                id: randomUUID(),
-                aggregateType: 'User',
-                aggregateId: user.getId().getValue(),
-                type: eventPayload.type,
-                payload: JSON.stringify(eventPayload.payload),
-            }),
-        ])
         await this.valkey.exec(batch, true)
     }
 
-    async getNotVerifiedUser(id: string): Promise<{ user: User; codeHash: string; attempts: number } | null> {
+    async getNotVerified(id: string): Promise<{ user: User; codeHash: string; attempts: number } | null> {
         const key = `user:not-verified:${id}`
         const data = await GlideJson.get(this.valkey, key)
         const parsed = this.parseGlideJson<{ user: { usersTable: any; profilesTable: any }; codeHash: string; attempts: number }>(data)
@@ -121,14 +123,14 @@ export class UserRepository implements IUserRepository {
     }
 
 
-    async getNotVerifiedUserByEmail(email: string): Promise<{ user: User; codeHash: string; attempts: number } | null> {
+    async getNotVerifiedByEmail(email: string): Promise<{ user: User; codeHash: string; attempts: number } | null> {
         const value = await this.valkey.get(`email:not-verified:${email}`)
         if (!value) return null
         const userId = typeof value === 'string' ? value : value.toString()
-        return this.getNotVerifiedUser(userId)
+        return this.getNotVerified(userId)
     }
 
-    async removeNotVerifiedUser(id: string): Promise<void> {
+    async removeNotVerified(id: string): Promise<void> {
         const key = `user:not-verified:${id}`
         const data = await GlideJson.get(this.valkey, key)
         const parsed = this.parseGlideJson<{ user: { usersTable: any; profilesTable: any }; codeHash: string; attempts: number }>(data)
@@ -143,24 +145,26 @@ export class UserRepository implements IUserRepository {
         await this.valkey.del(keysToRemove)
     }
 
-    async saveForgotPasswordSecret(userId: string, codeHash: string, code: string, attempts: number, eventPayload: { type: string; payload: any }): Promise<void> {
+    async saveForgotPasswordSecret(userId: string, codeHash: string, code: string, attempts: number, event: OutboxEvent): Promise<void> {
+        await this.db.transaction(async (tx) => {
+            await tx.insert(eventsForOne).values({
+                id: event.id,
+                type: event.type,
+                payload: event.payload,
+                receiverId: event.receiverId,
+                status: event.status,
+            })
+        })
+        await this.setForgotPasswordSecret(userId, codeHash, code, attempts)
+    }
+
+    async setForgotPasswordSecret(userId: string, codeHash: string, code: string, attempts: number): Promise<void> {
         const key = `user:forgot-password:${userId}`
         const data = {
             codeHash,
             code,
             attempts,
         }
-
-        await this.db.transaction(async (tx) => {
-            await tx.insert(outboxEventsTable).values({
-                id: randomUUID(),
-                aggregateType: 'User',
-                aggregateId: userId,
-                type: eventPayload.type,
-                payload: JSON.stringify(eventPayload.payload),
-                status: 'PENDING',
-            })
-        })
 
         const batch = new Batch(true)
         batch.customCommand(['JSON.SET', key, '$', JSON.stringify(data)])

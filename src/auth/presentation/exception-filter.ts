@@ -1,8 +1,28 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common'
-import { GqlContextType } from '@nestjs/graphql'
 import { Response } from 'express'
-import { AuthError, InvalidRefreshTokenError, InvalidTokenError, UserNotFoundError } from '../domain/error'
-import { InvalidEmailError, InvalidPhoneNumberError, InvalidUserIdError, MissingEmailError, MissingPhoneNumberError, CanNotLoginError, PhoneAlreadyExistsError, UserAlreadyExistsError, WeakPasswordError } from '../../users/domain/errors'
+import {
+    AuthError,
+    InvalidRefreshTokenError,
+    InvalidTokenError,
+    UserNotFoundError,
+    InvalidCredentialsError,
+    UserAlreadyVerifiedError,
+    CodeExpiredOrUserNotFoundError,
+    TooManyAttemptsError,
+    InvalidCodeError,
+    ResetRequestNotFoundError
+} from '../domain/error'
+import {
+    InvalidEmailError,
+    InvalidPhoneNumberError,
+    InvalidUserIdError,
+    MissingEmailError,
+    MissingPhoneNumberError,
+    CanNotLoginError,
+    PhoneAlreadyExistsError,
+    UserAlreadyExistsError,
+    WeakPasswordError
+} from '../../users/domain/errors'
 
 @Catch(AuthError, WeakPasswordError, InvalidEmailError, InvalidPhoneNumberError, InvalidUserIdError, MissingEmailError, MissingPhoneNumberError, CanNotLoginError, PhoneAlreadyExistsError, UserAlreadyExistsError, HttpException, Error)
 export class AuthExceptionFilter implements ExceptionFilter {
@@ -13,8 +33,18 @@ export class AuthExceptionFilter implements ExceptionFilter {
         if (exception instanceof AuthError) {
             if (exception instanceof InvalidTokenError || exception instanceof InvalidRefreshTokenError) {
                 status = HttpStatus.UNAUTHORIZED
-            } else if (exception instanceof UserNotFoundError) {
+            } else if (
+                exception instanceof UserNotFoundError ||
+                exception instanceof CodeExpiredOrUserNotFoundError ||
+                exception instanceof ResetRequestNotFoundError
+            ) {
                 status = HttpStatus.NOT_FOUND
+            } else if (exception instanceof InvalidCredentialsError) {
+                status = HttpStatus.UNAUTHORIZED
+            } else if (exception instanceof UserAlreadyVerifiedError || exception instanceof InvalidCodeError) {
+                status = HttpStatus.BAD_REQUEST
+            } else if (exception instanceof TooManyAttemptsError) {
+                status = HttpStatus.FORBIDDEN
             } else {
                 status = HttpStatus.UNAUTHORIZED
             }
@@ -44,7 +74,6 @@ export class AuthExceptionFilter implements ExceptionFilter {
             message = exception.message || 'Internal server error'
         }
 
-        // REST fallback (e.g. health check controller)
         const ctx = host.switchToHttp()
         const response = ctx.getResponse<Response>()
         response.status(status).json({

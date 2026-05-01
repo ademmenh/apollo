@@ -1,6 +1,7 @@
 import type { IUserRepository } from 'src/users/domain/repository'
 import { User } from 'src/users/domain/entity'
 import { UserProfile } from '../domain/user-profile'
+import { OutboxEvent } from '../../outbox/domain/outbox-event.entity'
 
 export class InMemoryUserRepository implements IUserRepository {
     private users: Map<string, User> = new Map()
@@ -28,33 +29,34 @@ export class InMemoryUserRepository implements IUserRepository {
         return null
     }
 
-    async saveNotVerified(user: User, codeHash: string, attempts: number, eventPayload: { type: string; payload: any }): Promise<void> {
+    async saveNotVerified(user: User, codeHash: string, attempts: number, event: OutboxEvent): Promise<void> {
+        await this.setNotVerified(user, codeHash, attempts)
+    }
+
+    async setNotVerified(user: User, codeHash: string, attempts: number): Promise<void> {
         this.notVerifiedUsers.set(user.getId().getValue(), { user, codeHash, attempts })
     }
 
-    async getNotVerifiedUser(id: string): Promise<{ user: User; codeHash: string; attempts: number } | null> {
+    async getNotVerified(id: string): Promise<{ user: User; codeHash: string; attempts: number } | null> {
         return this.notVerifiedUsers.get(id) || null
     }
 
-    async getNotVerifiedUserByPhone(phone: string): Promise<{ user: User; codeHash: string; attempts: number } | null> {
-        for (const notVerified of this.notVerifiedUsers.values()) {
-            if (notVerified.user.getPhoneNumber()?.getValue() === phone) return notVerified
-        }
-        return null
-    }
-
-    async getNotVerifiedUserByEmail(email: string): Promise<{ user: User; codeHash: string; attempts: number } | null> {
+    async getNotVerifiedByEmail(email: string): Promise<{ user: User; codeHash: string; attempts: number } | null> {
         for (const notVerified of this.notVerifiedUsers.values()) {
             if (notVerified.user.getEmail()?.getValue() === email) return notVerified
         }
         return null
     }
 
-    async removeNotVerifiedUser(id: string): Promise<void> {
+    async removeNotVerified(id: string): Promise<void> {
         this.notVerifiedUsers.delete(id)
     }
 
-    async saveForgotPasswordSecret(userId: string, codeHash: string, code: string, attempts: number, eventPayload: { type: string; payload: any }): Promise<void> {
+    async saveForgotPasswordSecret(userId: string, codeHash: string, code: string, attempts: number, event: OutboxEvent): Promise<void> {
+        await this.setForgotPasswordSecret(userId, codeHash, code, attempts)
+    }
+
+    async setForgotPasswordSecret(userId: string, codeHash: string, code: string, attempts: number): Promise<void> {
         this.forgotPasswordSecrets.set(userId, { codeHash, code, attempts })
     }
 

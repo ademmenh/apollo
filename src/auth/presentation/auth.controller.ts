@@ -1,5 +1,4 @@
 import { Body, Controller, Post, HttpStatus, UseGuards, Param, HttpCode } from '@nestjs/common'
-import { randomUUID } from 'crypto'
 import { ApiTags, ApiOperation, ApiExtraModels, getSchemaPath } from '@nestjs/swagger'
 import { RegisterUserDto, LoginDto, VerifyUserDto, ForgotPasswordResetDto, RequestForgotPasswordDto, ResetPasswordDto } from './dtos/input.dto'
 import { IResponse, IAuthResponse, TokensRDTO, UserProfileRDTO } from './dtos/response.dto'
@@ -45,7 +44,7 @@ export class AuthController {
         },
     ])
     async register(@Body() dto: RegisterUserDto): Promise<IResponse<UserProfileRDTO>> {
-        const user = await this.registerUserUseCase.execute({ ...dto, id: randomUUID() })
+        const user = await this.registerUserUseCase.execute(dto)
         return {
             message: 'User registered successfully',
             statusCode: HttpStatus.CREATED,

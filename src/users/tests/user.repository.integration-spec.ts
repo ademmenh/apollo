@@ -16,6 +16,7 @@ import { randomUUID } from 'crypto'
 import { IPasswordHasher } from '../../auth/domain/password-hasher'
 import { Logger } from '../../common/infrastructure/logger'
 import * as winston from 'winston'
+import { OutboxEvent } from '../../outbox/domain/outbox-event.entity'
 
 describe('UserRepository (Integration)', () => {
     let repository: UserRepository
@@ -82,12 +83,12 @@ describe('UserRepository (Integration)', () => {
 
     it('user not found by ID', async () => {
         const foundUser = await repository.findById(randomUUID())
-        if (foundUser !== null) throw new Error('User should not be null')
+        if (foundUser !== null) throw new Error('User should not be found')
     })
 
     it('user not found by email', async () => {
         const foundUser = await repository.findByEmail('nonexistent@example.com')
-        if (foundUser !== null) throw new Error('User should not be null')
+        if (foundUser !== null) throw new Error('User should not be found')
     })
 
     it('update existing user', async () => {
@@ -122,15 +123,15 @@ describe('UserRepository (Integration)', () => {
         )
         const codeHash = 'hash123'
         const attempts = 3
-        const eventPayload = { type: 'VERIFICATION_EMAIL_REQUESTED', payload: { to: 'test@example.com', fullName: 'Test', code: '123' } }
-        await repository.saveNotVerified(user, codeHash, attempts, eventPayload)
-        const cached = await repository.getNotVerifiedUser(userId.getValue())
+        const event = OutboxEvent.create(randomUUID(), 'VERIFICATION_EMAIL_REQUESTED', { fullName: 'Test', code: '123' }, userId.getValue())
+        await repository.saveNotVerified(user, codeHash, attempts, event)
+        const cached = await repository.getNotVerified(userId.getValue())
         if (!cached) throw new Error('Cached user should not be null')
         expect(cached.user.getId().getValue()).toBe(userId.getValue())
         expect(cached.codeHash).toBe(codeHash)
         expect(cached.attempts).toBe(attempts)
         const dbUser = await repository.findById(userId.getValue())
-        if (dbUser !== null) throw new Error('User should not be null')
+        if (dbUser !== null) throw new Error('User should be in Valkey, not DB yet')
     })
 
     it('remove not verified user', async () => {
@@ -144,10 +145,10 @@ describe('UserRepository (Integration)', () => {
             'To Remove',
             new Date('1999-12-31'),
         )
-        const eventPayload = { type: 'VERIFICATION_EMAIL_REQUESTED', payload: { to: 'test@example.com', fullName: 'Test', code: '123' } }
-        await repository.saveNotVerified(user, 'hash', 3, eventPayload)
-        await repository.removeNotVerifiedUser(userId.getValue())
-        const cached = await repository.getNotVerifiedUser(userId.getValue())
-        if (cached !== null) throw new Error('User should not be null')
+        const event = OutboxEvent.create(randomUUID(), 'VERIFICATION_EMAIL_REQUESTED', { fullName: 'Test', code: '123' }, userId.getValue())
+        await repository.saveNotVerified(user, 'hash', 3, event)
+        await repository.removeNotVerified(userId.getValue())
+        const cached = await repository.getNotVerified(userId.getValue())
+        if (cached !== null) throw new Error('User should have been removed from Valkey')
     })
 })

@@ -1,7 +1,8 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common'
+import { Inject, Injectable } from '@nestjs/common'
 import type { IUserRepository } from '../../users/domain/repository'
 import type { IPasswordHasher } from '../domain/password-hasher'
 import { Password } from '../../users/domain/password'
+import { UserNotFoundError, InvalidCredentialsError } from '../domain/error'
 
 @Injectable()
 export class ChangePasswordUseCase {
@@ -12,9 +13,11 @@ export class ChangePasswordUseCase {
 
     async execute(id: string, oldPasswordRaw: string, newPasswordRaw: string): Promise<void> {
         const user = await this.userRepository.findById(id)
-        if (!user) throw new NotFoundException('User not found')
+        if (!user) throw new UserNotFoundError()
+        
         const isMatch = await user.getPassword().compare(oldPasswordRaw, this.passwordHasher)
-        if (!isMatch) throw new BadRequestException('Invalid old password')
+        if (!isMatch) throw new InvalidCredentialsError() // Or define InvalidOldPasswordError
+        
         const newPassword = await Password.create(newPasswordRaw, this.passwordHasher)
         user.changePassword(newPassword)
         await this.userRepository.update(user)

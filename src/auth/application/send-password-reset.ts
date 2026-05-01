@@ -1,6 +1,11 @@
 import { Injectable, Inject } from '@nestjs/common'
 import type { IEmailPort } from '../domain/email.port'
-import { PasswordResetEmailRequestedSchema } from '../infrastructure/events'
+
+interface IPasswordResetEmailRequested {
+    to: string
+    fullName: string
+    code: string
+}
 
 @Injectable()
 export class SendPasswordResetUseCase {
@@ -8,7 +13,7 @@ export class SendPasswordResetUseCase {
         @Inject('IEmailAdapter') private readonly emailAdapter: IEmailPort,
     ) { }
 
-    async execute(event: PasswordResetEmailRequestedSchema): Promise<void> {
+    async execute(event: IPasswordResetEmailRequested): Promise<void> {
         await this.emailAdapter.sendPasswordResetEmail(event.to, event.fullName, event.code)
     }
 }

@@ -6,8 +6,8 @@ import { User } from 'src/users/domain/entity'
 import { UserId } from 'src/users/domain/userId'
 import { Email } from 'src/users/domain/email'
 import { Password } from 'src/users/domain/password'
-import { BadRequestException, NotFoundException } from '@nestjs/common'
 import { PhoneNumber } from 'src/users/domain/phone-number'
+import { UserNotFoundError, InvalidCredentialsError } from '../domain/error'
 
 describe('ChangePasswordUseCase', () => {
     let useCase: ChangePasswordUseCase
@@ -52,11 +52,11 @@ describe('ChangePasswordUseCase', () => {
         )
         await userRepository.save(user)
         const promise = useCase.execute(userId, 'wrongPassword', 'newPassword123')
-        expect(promise).rejects.toThrow(BadRequestException)
+        expect(promise).rejects.toThrow(InvalidCredentialsError)
     })
 
     it('user not found', async () => {
         const promise = useCase.execute('nonexistent', 'old', 'new')
-        expect(promise).rejects.toThrow(NotFoundException)
+        expect(promise).rejects.toThrow(UserNotFoundError)
     })
 })
