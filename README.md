@@ -1,21 +1,27 @@
 # Apollo Project
 
 ## Description
-Apollo is a GraphQL API built with NestJS and structured around Domain-Driven Design (DDD) principles. 
+Apollo is a high-performance GraphQL API built with NestJS, designed for a scalable social networking platform. It is strictly structured around **Domain-Driven Design (DDD)** and **Clean Architecture** principles, ensuring clear boundaries between business logic and infrastructure.
+
+The project features a robust **Outbox Pattern** for reliable event processing, optimized **GraphQL DataLoaders** to eliminate N+1 query problems in nested social feeds.
 
 ## File System Structure
-The application code heavily adheres to DDD boundaries, split into distinct domain modules (`auth` and `users`) and a `common` utilities area:
+The application code adheres to strict DDD boundaries, organized into the following core modules:
 
-- `src/auth/`
-  - `application/`: Contains the use cases (e.g., Login, Verify) and the background Outbox workers.
-  - `domain/`: Core domain logic, interfaces, Entities, and exceptions.
-  - `infrastructure/`: Repository implementations bridging Drizzle (PG) and Valkey caches, plus external service adapters.
-  - `presentation/`: GraphQL `AuthResolver` definitions, mappers, input structures, and guards.
-  - `tests/`: End-to-end testing flows and worker integration tests.
-- `src/users/`: User-specific domain boundaries, value objects, and base persistence.
-- `src/config/`: Startup configurations (Module aggregators) injecting environment, DB, logging, and caches.
-- `src/common/`: Common utilities including custom structured Winston loggers and interceptors.
-- `nginx/`: Templates to facilitate deploying Apollo behind a high-performance reverse proxy.
+- `src/auth/`: Complete authentication lifecycle, including registration, login, and password recovery.
+  - `application/`: Use cases and background Outbox workers.
+  - `domain/`: Core entities, value objects, and repository interfaces.
+  - `infrastructure/`: Drizzle ORM (Postgres) and Valkey cache implementations.
+  - `presentation/`: REST controller, guards, and DTO mappers.
+- `src/users/`: Manages user accounts, profiles, and social relationships.
+- `src/posts/`: Handles content creation and feed retrieval.
+- `src/outbox/`: A cross-cutting module implementing the Outbox Pattern for reliable transactional messaging.
+- `src/common/`: Shared utilities, custom structured loggers (Winston), and global interceptors.
+- `src/config/`: Application bootstrap, environment configuration, and infrastructure provider injection.
+
+## Technical Highlights
+- **Performance**: Uses PostgreSQL window functions and `dataloader` batching to efficiently resolve complex nested social graphs in a single database round-trip.
+- **Reliability**: Implements the Transactional Outbox pattern to ensure that side effects (like sending emails or updating caches) are eventually consistent with database transactions.
 
 ## How to Run
 
